@@ -5,7 +5,6 @@ const Init = std.process.Init;
 const Address = net.IpAddress;
 const Allocator = std.mem.Allocator;
 const Peer = @import("peer.zig").Peer;
-
 const logger = std.log;
 
 pub const Server = struct {
@@ -21,6 +20,11 @@ pub const Server = struct {
         }
     };
 
+    const PeerChangeStateData = struct {
+        server: *Server,
+        io: std.Io,
+    };
+
     const State = enum {
         none,
         running,
@@ -34,6 +38,7 @@ pub const Server = struct {
     group: std.Io.Group,
     allocator: Allocator,
     peers: []Peer,
+    userdata: PeerChangeStateData,
 
     pub fn init(allocator: Allocator, config: ServerConfig) !Server {
         const address = net.IpAddress.parse(config.host, config.port) catch |err| {
@@ -48,6 +53,7 @@ pub const Server = struct {
             .group = .init,
             .allocator = allocator,
             .peers = undefined,
+            .userdata = undefined,
         };
 
         self.peers = try allocator.alloc(Peer, 1024);
@@ -73,6 +79,10 @@ pub const Server = struct {
             return error.BindSocket;
         };
 
+        self.userdata = .{
+            .server = self,
+            .io = io,
+        };
         self.state = .running;
         try self.group.concurrent(io, Server.waitAcceptConnect, .{ self, io });
     }
@@ -118,10 +128,14 @@ pub const Server = struct {
 
         if (self.getEmptySlot()) |peerId| {
             logger.debug("{d} peer accepted", .{peerId});
-            self.peers[peerId] = .init(@intCast(peerId), stream);
+            self.peers[peerId] = .init(
+                @intCast(peerId),
+                stream,
+                Server.onChangePeerState,
+                &self.userdata,
+            );
 
             var peer = self.peers[peerId];
-
             peer.accept(io, &self.group) catch |err| {
                 switch (err) {
                     error.InvalidInitCode => {
@@ -135,14 +149,30 @@ pub const Server = struct {
             };
         } else {
             logger.debug("server is full", .{});
-            stream.socket.close(io);
+            stream.close(io);
+        }
+    }
+
+    fn onChangePeerState(ptr: *anyopaque, peer: *Peer, state: Peer.State) void {
+        const data: *PeerChangeStateData = @ptrCast(@alignCast(ptr));
+        const io = data.io;
+        switch (state) {
+            .Disconnected => {
+                peer.stream.close(io);
+            },
+            .Invalid => {
+                peer.stream.close(io);
+            },
+            else => {
+                logger.info("no handled", .{});
+            },
         }
     }
 
     fn getEmptySlot(self: *Server) ?usize {
         for (self.peers, 0..) |peer, id| {
             // empty or disconnected
-            if (@intFromEnum(peer.state) & 0b01 == 0) {
+            if (@intFromEnum(peer.state) & 0b10 == 0) {
                 return id;
             }
         }

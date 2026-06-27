@@ -1,7 +1,4 @@
-const chardomain = @import("core");
-
-const CharacterList = chardomain.CharacterList;
-const Item = chardomain.Item;
+const domain = @import("core").domains;
 
 pub const Opcode = struct {
     pub const LOGIN = 0x020D;
@@ -39,8 +36,8 @@ pub const PacketLogin = extern struct {
 
 pub const PacketCharList = extern struct {
     header: Header,
-    characters: CharacterList,
-    cargo: [128]Item,
+    characters: domain.CharacterList,
+    cargo: [128]domain.Item,
     gold: i32,
     name: [16]u16,
     keys: [16]u16,
@@ -49,19 +46,22 @@ pub const PacketCharList = extern struct {
     dorimee: i32,
 };
 
-pub const OpcodeRecv = enum(u16) {
+pub const PacketOpcode = enum(u16) {
     unknown,
     login = Opcode.LOGIN,
+    textmessage = Opcode.TEXTMESSAGE,
 
-    pub fn parse(code: u16) OpcodeRecv {
+    pub fn parse(code: u16) PacketOpcode {
         return switch (code) {
-            Opcode.LOGIN => .login,
+            Opcode.LOGIN => PacketOpcode.login,
+            Opcode.TEXTMESSAGE => PacketOpcode.textmessage,
             else => .unknown,
         };
     }
 };
 
-pub const Packet = union(OpcodeRecv) {
+pub const Packet = union(PacketOpcode) {
     unknown: Header,
     login: PacketLogin,
+    textmessage: PacketTextMessage,
 };

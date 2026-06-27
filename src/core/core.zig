@@ -1,1 +1,1 @@
-pub const domains = @import("entities/domains.zig");
+pub const domains = @import("domains/domains.zig");

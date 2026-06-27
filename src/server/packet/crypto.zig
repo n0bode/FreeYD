@@ -23,14 +23,18 @@ const keywords = [_]u8{ // 7.xx keys
     0xd7, 0x8f, 0x05, 0x7d, 0x0d, 0x34, 0x8f, 0x7d, 0xad, 0x87, 0xe9, 0x7c, 0x85, 0x80, 0x85, 0x79, 0x8a, 0xc3, 0xe7, 0xa5, 0xe8, 0x6b, 0x0d, 0x74, 0x10, 0x73, 0x33, 0x17, 0x0d, 0x37, 0x21, 0x19,
 };
 
-pub fn descrypt(verifier: packet.Verifier, bMessage: []u8) !packet.Header {
-    var checksum: u8 = 0;
-    const iKeyword = keywords[verifier.iKeyword *% 2];
-    std.debug.print("iKeyword = {d}\n", .{verifier.iKeyword});
-    for (4..bMessage.len, 0..) |i, count| {
+pub fn descrypt(bMessage: []u8) !packet.Header {
+    var sum: u8 = 0;
+    const size: u16 = std.mem.readInt(u16, bMessage[0..2], .little);
+    const iKeyword: u16 = @as(u16, @intCast(bMessage[2])) * 2;
+    const checksum = bMessage[3];
+
+    const keyword = keywords[iKeyword];
+    std.debug.print("Header = ({d}, {d}, {X}) \n", .{ size, iKeyword, checksum });
+    for (4..size, 0..) |i, count| {
         const byte = bMessage[i];
 
-        const rst = (count + iKeyword) & 0xFF;
+        const rst = (count + keyword) & 0xFF;
         const key = keywords[rst * 2 + 1];
 
         const mod: u2 = @intCast(i & 0b11);
@@ -42,16 +46,17 @@ pub fn descrypt(verifier: packet.Verifier, bMessage: []u8) !packet.Header {
         };
         bMessage[i] = deByte;
 
-        checksum = checksum +% (byte -% deByte);
+        sum = sum +% (byte -% deByte);
     }
 
-    std.debug.print("calc({X}) = {X}\n", .{ checksum, verifier.checksum });
-    if (checksum != verifier.checksum) {
+    std.debug.print("{s}\n", .{bMessage[0..size]});
+    std.debug.print("checksum({X}) must be {X}\n", .{ sum, checksum });
+    if (sum != checksum) {
         return error.EncryptInvalid;
     }
 
     return .{
-        .verifier = verifier,
+        .verifier = @bitCast(bMessage[0..4].*),
         .operationCode = mem.bytesToValue(u16, bMessage[4..6]),
         .index = mem.bytesToValue(u16, bMessage[6..8]),
         .time = mem.bytesToValue(u32, bMessage[8..12]),
@@ -60,7 +65,7 @@ pub fn descrypt(verifier: packet.Verifier, bMessage: []u8) !packet.Header {
 
 pub fn encrypt(bMessage: []u8) packet.Verifier {
     // TODO: generate random value
-    const staticKeyword: u8 = 100;
+    const staticKeyword: u16 = 165;
 
     const iKeyword = keywords[staticKeyword *% 2];
     var checksum: u8 = 0;
@@ -82,8 +87,7 @@ pub fn encrypt(bMessage: []u8) packet.Verifier {
     }
 
     // size
-    const pSize: *u16 = @ptrCast(@alignCast(bMessage[0..2]));
-    pSize.* = @intCast(bMessage.len);
+    std.mem.writeInt(u16, bMessage[0..2], @intCast(bMessage.len), .little);
     // checksum
     bMessage[3] = checksum;
     // iKeyword
@@ -91,4 +95,53 @@ pub fn encrypt(bMessage: []u8) packet.Verifier {
 
     const verifier: packet.Verifier = @bitCast(bMessage[0..4].*);
     return verifier;
+}
+
+test "encrypt - raw message" {
+    const expect = std.testing.expectEqual;
+    const expectEqualStrings = std.testing.expectEqualStrings;
+
+    var text = packet.PacketTextMessage{
+        .header = .{
+            .index = 190,
+            .operationCode = 0x22,
+            .time = 3,
+            .verifier = undefined,
+        },
+        .message = [_]u8{' '} ** 96,
+    };
+
+    const textStr = "All that is gold does not glitter, not all those who wander are lost; the old that is strong...";
+
+    @memcpy(text.message[0..textStr.len], textStr);
+
+    var textSaved: [96]u8 = undefined;
+    @memcpy(textSaved[0..], text.message[0..]);
+
+    var encrypted = std.mem.asBytes(&text);
+    const verifier = encrypt(encrypted[0..]);
+
+    try expect(108, verifier.size);
+
+    var descrypted: [@sizeOf(packet.PacketTextMessage)]u8 = undefined;
+    @memcpy(descrypted[0..], encrypted[0..]);
+
+    const header = try descrypt(descrypted[0..]);
+    const textDescrypted: packet.PacketTextMessage = @bitCast(descrypted);
+
+    try expect(verifier.size, header.verifier.size);
+    try expect(verifier.iKeyword, header.verifier.iKeyword);
+    try expect(verifier.checksum, header.verifier.checksum);
+    try expect(0x22, header.operationCode);
+    try expect(190, header.index);
+    try expect(3, header.time);
+    try expectEqualStrings(textSaved[0..], textDescrypted.message[0..]);
+}
+
+test "decode - createChar" {
+    const encoded = "dAClPv/mDPuFEfj9jiHELfrxRP348Rz9+vDk/HofbC0wHXQAMvH0/e7wPP378PT7/Pn0+/rqMP2vQOT9cFJ0b/7x6P0M8+QAKvj0APjx9P1K8fT9IvHw/V7x9P/68fT9+vH0/fry5P365IT9DPF0/PrxOPk=";
+    var buffer: [116]u8 = undefined;
+
+    try std.base64.standard.Decoder.decode(buffer[0..], encoded);
+    _ = try descrypt(buffer[0..]);
 }

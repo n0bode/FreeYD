@@ -1,12 +1,4 @@
-pub const Item = extern struct {
-    itemID: i16,
-    effect: [3]IValue,
-};
-
-pub const IValue = extern struct {
-    index: u8,
-    value: u8,
-};
+const Item = @import("item.zig").Item;
 
 pub const CharStat = extern struct {
     level: u16,

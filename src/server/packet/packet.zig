@@ -39,17 +39,38 @@ pub const PacketCharList = extern struct {
     characters: domain.CharacterList,
     cargo: [128]domain.Item,
     gold: i32,
-    name: [16]u16,
+    name: [16]u8,
     keys: [16]u16,
     cash: i32,
     // TODO: we need to know what is it
     dorimee: i32,
 };
 
+pub const OpcodeRecv = enum(u16) {
+    unknown,
+    login = Opcode.LOGIN,
+
+    pub fn parse(code: u16) OpcodeRecv {
+        return switch (code) {
+            Opcode.LOGIN => .login,
+            else => .unknown,
+        };
+    }
+};
+
+pub const PacketCharCreate = extern struct {
+    header: Header,
+
+    slot: i32,
+    name: [16]u8,
+    class: i32,
+};
+
 pub const PacketOpcode = enum(u16) {
     unknown,
     login = Opcode.LOGIN,
     textmessage = Opcode.TEXTMESSAGE,
+    charlist = Opcode.CHARLIST,
 
     pub fn parse(code: u16) PacketOpcode {
         return switch (code) {
@@ -60,8 +81,7 @@ pub const PacketOpcode = enum(u16) {
     }
 };
 
-pub const Packet = union(PacketOpcode) {
+pub const Packet = union(OpcodeRecv) {
     unknown: Header,
     login: PacketLogin,
-    textmessage: PacketTextMessage,
 };

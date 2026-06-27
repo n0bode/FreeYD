@@ -5,20 +5,20 @@ pub const CharStat = extern struct {
     defense: i16,
     attack: i16,
 
-    merchant: u4,
-    direction: u4,
-    speed: u4,
-    chaosRate: u4,
+    merchant: u8,
+    direction: u8,
+    speed: u8,
+    chaosRate: u8,
 
     max_hp: u16,
     max_mp: u16,
     current_hp: u16,
     current_mp: u16,
 
-    strength: i16,
-    intelligence: i16,
-    dexterity: i16,
-    constitution: i16,
+    str: i16,
+    int: i16,
+    dex: i16,
+    con: i16,
 
     w_master: u8,
     f_master: u8,

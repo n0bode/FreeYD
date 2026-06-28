@@ -80,10 +80,10 @@ pub const FileDB = struct {
             .gold = 0,
             .ipAddr = [_]u8{0} ** 16,
             .keys = [_]u8{0} ** 16,
-            .mode = 0,
+            .mode = .unset,
             .name = [_]u8{0} ** 16,
-            .numericPassword = [_]u8{0} ** 6,
             .password = [_]u8{0} ** 16,
+            .pinBits = .empty,
             .server = 0,
         };
 

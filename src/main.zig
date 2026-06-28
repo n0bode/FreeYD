@@ -5,6 +5,8 @@ const Init = std.process.Init;
 
 const Server = @import("server/server.zig").Server;
 const ParseArgs = @import("parsearg/parsearg.zig").ParseArgs;
+const FileDB = @import("filedb").FileDB;
+const Account = @import("core").domains.Account;
 
 var running = std.atomic.Value(bool).init(true);
 
@@ -74,7 +76,9 @@ pub fn main(init: Init) !void {
     try args.parse(init.minimal.args.iterate(), &config);
     captureSignal();
 
-    var server: Server = try Server.init(allocator, config.config);
+    var database = FileDB.init("dbs");
+
+    var server: Server = try Server.init(allocator, database.interface(), config.config);
     try server.run(init.io);
 
     std.debug.print("running server on {s}:{d}\n", .{ config.config.host, config.config.port });

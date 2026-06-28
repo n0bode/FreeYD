@@ -7,7 +7,8 @@ const Account = @import("core").domains.Account;
 
 const Io = std.Io;
 const net = Io.net;
-const DB = @import("db").filedb.FileDB;
+
+const IDatabase = @import("db").Database;
 
 const Stream = net.Stream;
 
@@ -41,8 +42,10 @@ pub const Peer = struct {
 
     fnChangeState: ?FNChangeState,
     userdata: *anyopaque,
+    db: IDatabase,
 
     pub fn init(
+        database: IDatabase,
         userID: u32,
         stream: Stream,
         onchange: FNChangeState,
@@ -59,6 +62,7 @@ pub const Peer = struct {
             .account = undefined,
             .fnChangeState = onchange,
             .userdata = userdata,
+            .db = database,
         };
     }
 
@@ -74,6 +78,7 @@ pub const Peer = struct {
             .writer = undefined,
             .fnChangeState = null,
             .userdata = undefined,
+            .db = undefined,
         };
     }
 
@@ -177,6 +182,9 @@ pub const Peer = struct {
             switch (packetDecoded) {
                 .login => |login| {
                     if (!self.onLogin(io, login)) {
+                        self.sendTextMessage("usuario ou senha invalido") catch {
+                            logger.err("failed to respond", .{});
+                        };
                         self.callChangeState(.Invalid);
                         return;
                     }
@@ -194,14 +202,16 @@ pub const Peer = struct {
             return false;
         }
 
-        const username = std.mem.trimEnd(u8, login.username[0..], "");
-        const password = std.mem.trimEnd(u8, login.password[0..], "");
+        const username = std.mem.sliceTo(&login.username, 0);
+        const password = std.mem.sliceTo(&login.password, 0);
 
-        if (DB.login(io, &self.account, username, password)) {
-            return false;
+        if (!self.db.login(io, username, password, &self.account)) {
+            if (!self.db.signup(io, username, password, &self.account)) {
+                logger.debug("username({s}) not found", .{username});
+                return false;
+            }
         }
 
-        const account = self.account;
         var charList = packet.PacketCharList{
             .header = .{
                 .operationCode = packet.Opcode.CHARLIST,
@@ -209,7 +219,7 @@ pub const Peer = struct {
                 .time = 0,
                 .verifier = undefined,
             },
-            .cargo = account.cargo,
+            .cargo = self.account.cargo,
             .cash = 0,
             .characters = .{
                 .exp = [4]u32{ 0, 0, 0, 0 },
@@ -224,7 +234,7 @@ pub const Peer = struct {
             .dorimee = 0,
             .gold = 1000,
             .keys = undefined,
-            .name = [_]u8{' '} ** 16,
+            .name = self.account.name,
         };
         self.sendPacket(packet.PacketCharList, &charList) catch {
             return false;

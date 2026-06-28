@@ -5,6 +5,7 @@ const Init = std.process.Init;
 const Address = net.IpAddress;
 const Allocator = std.mem.Allocator;
 const Peer = @import("peer.zig").Peer;
+const Database = @import("db").Database;
 const logger = std.log;
 
 pub const Server = struct {
@@ -39,8 +40,13 @@ pub const Server = struct {
     allocator: Allocator,
     peers: []Peer,
     userdata: PeerChangeStateData,
+    database: Database,
 
-    pub fn init(allocator: Allocator, config: ServerConfig) !Server {
+    pub fn init(
+        allocator: Allocator,
+        database: Database,
+        config: ServerConfig,
+    ) !Server {
         const address = net.IpAddress.parse(config.host, config.port) catch |err| {
             logger.err("host:port({s}:{d}) invalid: {s}", .{ config.host, config.port, @errorName(err) });
             return error.ParseIP;
@@ -54,6 +60,7 @@ pub const Server = struct {
             .allocator = allocator,
             .peers = undefined,
             .userdata = undefined,
+            .database = database,
         };
 
         self.peers = try allocator.alloc(Peer, 1024);
@@ -129,13 +136,14 @@ pub const Server = struct {
         if (self.getEmptySlot()) |peerId| {
             logger.debug("{d} peer accepted", .{peerId});
             self.peers[peerId] = .init(
+                self.database,
                 @intCast(peerId),
                 stream,
                 Server.onChangePeerState,
                 &self.userdata,
             );
 
-            var peer = self.peers[peerId];
+            const peer = &self.peers[peerId];
             peer.accept(io, &self.group) catch |err| {
                 switch (err) {
                     error.InvalidInitCode => {
@@ -156,6 +164,8 @@ pub const Server = struct {
     fn onChangePeerState(ptr: *anyopaque, peer: *Peer, state: Peer.State) void {
         const data: *PeerChangeStateData = @ptrCast(@alignCast(ptr));
         const io = data.io;
+
+        logger.info("user({d}): handle event {s}", .{ peer.userID, @tagName(state) });
         switch (state) {
             .Disconnected => {
                 peer.stream.close(io);

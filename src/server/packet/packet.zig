@@ -26,8 +26,8 @@ pub const PacketTextMessage = extern struct {
 
 pub const PacketLogin = extern struct {
     header: Header,
-    username: [16]u8,
-    password: [12]u8,
+    username: [16:0]u8,
+    password: [12:0]u8,
     version: i32,
     none: i32,
     keys: [16]u8,

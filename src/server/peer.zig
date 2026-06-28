@@ -43,6 +43,7 @@ pub const Peer = struct {
     fnChangeState: ?FNChangeState,
     userdata: *anyopaque,
     db: IDatabase,
+    lastReceiveTime: u64 = 0,
 
     pub fn init(
         database: IDatabase,
@@ -145,6 +146,20 @@ pub const Peer = struct {
         try writer.flush();
     }
 
+    pub fn sendPulse(self: *Peer, code: u16) !void {
+        var header = packet.Header{
+            .operationCode = code,
+            .index = @intCast(self.userID),
+            .time = std.time.epoch.unix,
+            .verifier = undefined,
+        };
+
+        return try self.sendPacket(
+            packet.Header,
+            &header,
+        );
+    }
+
     fn callChangeState(self: *Peer, state: State) void {
         self.state = state;
         if (self.fnChangeState) |func| {
@@ -179,6 +194,7 @@ pub const Peer = struct {
                 continue;
             };
 
+            self.lastReceiveTime = std.time.epoch.unix;
             switch (packetDecoded) {
                 .login => |login| {
                     if (!self.onLogin(io, login)) {
@@ -188,7 +204,25 @@ pub const Peer = struct {
                         self.callChangeState(.Invalid);
                         return;
                     }
+
                     self.callChangeState(.Connected);
+                },
+                .ping => {},
+                .pin => |pin| {
+                    if (self.account.mode == .unset) {
+                        const pinPassword = Account.PinPassword.fromChar(pin.numeric);
+                        self.account.pinBits = pinPassword;
+                        self.account.mode = .normal;
+                    } else {
+                        var pinAccount: [6]u8 = undefined;
+                        self.account.pinBits.toChars(&pinAccount);
+                        if (!std.mem.eql(u8, pinAccount[0..], pin.numeric[0..])) {
+                            self.sendPulse(packet.Opcode.PINFAIL) catch {
+                                self.callChangeState(.Disconnected);
+                                return;
+                            };
+                        }
+                    }
                 },
                 .unknown => |header| {
                     logger.debug("[{d}] Unknown opcode: {X}", .{ userID, header.operationCode });

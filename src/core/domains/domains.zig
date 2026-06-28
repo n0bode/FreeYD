@@ -1,11 +1,11 @@
 pub const CharacterList = @import("char.zig").CharacterList;
 pub const Item = @import("item.zig").Item;
 
-pub const Account = struct {
+pub const Account = extern struct {
     accountID: u64,
-    name: []const u8,
-    password: []const u8,
-    numericPassword: [6]u4,
+    name: [16]u8,
+    password: [16]u8,
+    numericPassword: [6]u8,
     server: u8,
     keys: [16]u8,
     ipAddr: [16]u8,

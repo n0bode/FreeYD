@@ -11,7 +11,7 @@ pub const Account = extern struct {
     accountID: u64,
     name: [16]u8,
     password: [16]u8,
-    pinBits: PinPassword,
+    pinPassword: PinPassword,
     server: u8,
     keys: [16]u8,
     ipAddr: [16]u8,

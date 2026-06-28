@@ -20,13 +20,14 @@ pub fn decode(bMessage: []u8) Error!Packet {
     };
 
     const opcode: packet.OpcodeRecv = .parse(header.operationCode);
-    return switch (opcode) {
-        .login => .{
-            .login = parsePacket(packet.PacketLogin, bMessage),
-        },
-        .unknown => .{
-            .unknown = header,
-        },
+
+    inline for (std.meta.fields(Packet)) |field| {
+        if (std.mem.eql(u8, @tagName(opcode), field.name)) {
+            return @unionInit(Packet, field.name, parsePacket(field.type, bMessage));
+        }
+    }
+    return .{
+        .unknown = parsePacket(Header, bMessage),
     };
 }
 

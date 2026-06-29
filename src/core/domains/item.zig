@@ -2,12 +2,12 @@ const std = @import("std");
 
 pub const Item = extern struct {
     itemID: i16,
-    effect: [3]IValue,
+    effect: [3]u16,
 
     pub fn zero() Item {
         return Item{
             .itemID = 0,
-            .effect = [_]IValue{.zero()} ** 3,
+            .effect = [_]u16{0} ** 3,
         };
     }
 };

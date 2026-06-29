@@ -59,36 +59,45 @@ pub const FileDB = struct {
         password: []const u8,
         account: *Account,
     ) bool {
+        account.* = std.mem.zeroInit(Account, .{
+            .accountID = self.rand.next(),
+            .mode = .unset,
+        });
+
+        @memcpy(account.name[0..username.len], username);
+        @memcpy(account.password[0..password.len], password);
+
+        return self.persistAccount(io, account, true);
+    }
+
+    pub fn updateAccount(
+        self: *FileDB,
+        io: std.Io,
+        account: *Account,
+    ) bool {
+        return self.persistAccount(io, account, false);
+    }
+
+    pub fn interface(self: *FileDB) Database {
+        return Database.from(self);
+    }
+
+    fn persistAccount(self: *FileDB, io: std.Io, account: *Account, exclusive: bool) bool {
         var buffer: [1024]u8 = undefined;
+        const username = std.mem.sliceTo(account.name[0..], 0);
         const path = std.fmt.bufPrint(buffer[0..], "{s}/{s}.db", .{ self.path, username }) catch {
             return false;
         };
 
         cwd.createDirPath(io, self.path) catch {};
         // exclusive creation fails if the account already exists
-        const file = cwd.createFile(io, path, .{ .exclusive = true }) catch |err| {
+        const file = cwd.createFile(io, path, .{
+            .exclusive = exclusive,
+        }) catch |err| {
             std.debug.print("erro = {s}\n", .{@errorName(err)});
             return false;
         };
         defer file.close(io);
-
-        account.* = Account{
-            .accountID = self.rand.next(),
-            .cargo = [_]Item{Item.zero()} ** 128,
-            .charInfo = 0,
-            .charSelected = 0,
-            .gold = 0,
-            .ipAddr = [_]u8{0} ** 16,
-            .keys = [_]u8{0} ** 16,
-            .mode = .unset,
-            .name = [_]u8{0} ** 16,
-            .password = [_]u8{0} ** 16,
-            .pinBits = .empty,
-            .server = 0,
-        };
-
-        @memcpy(account.name[0..username.len], username);
-        @memcpy(account.password[0..password.len], password);
 
         var writerA = file.writer(io, self.writerBuffer[0..]);
         const writer = &writerA.interface;
@@ -99,9 +108,5 @@ pub const FileDB = struct {
         writer.flush() catch {};
 
         return true;
-    }
-
-    pub fn interface(self: *FileDB) Database {
-        return Database.from(self);
     }
 };

@@ -108,7 +108,7 @@ pub const Peer = struct {
 
         const header = packet.Header{
             .index = @intCast(self.userID),
-            .operationCode = packet.Opcode.TEXTMESSAGE,
+            .operationCode = @intFromEnum(packet.Opcode.TEXTMESSAGE),
             .time = 0,
             .verifier = undefined,
         };
@@ -146,9 +146,9 @@ pub const Peer = struct {
         try writer.flush();
     }
 
-    pub fn sendPulse(self: *Peer, code: u16) !void {
+    pub fn sendPulse(self: *Peer, code: packet.Opcode) !void {
         var header = packet.Header{
-            .operationCode = code,
+            .operationCode = @intFromEnum(code),
             .index = @intCast(self.userID),
             .time = std.time.epoch.unix,
             .verifier = undefined,
@@ -208,16 +208,26 @@ pub const Peer = struct {
                     self.callChangeState(.Connected);
                 },
                 .ping => {},
+                .charCreate => |req| {
+                    logger.debug("create new char: {s} class: {s}", .{ req.name, @tagName(req.class) });
+                    if (!self.onCreateCharacter(io, req)) {
+                        logger.err("failed to create char", .{});
+                    }
+                },
                 .pin => |pin| {
                     if (self.account.mode == .unset) {
                         const pinPassword = Account.PinPassword.fromChar(pin.numeric);
-                        self.account.pinBits = pinPassword;
+                        self.account.pinPassword = pinPassword;
                         self.account.mode = .normal;
+                        if (!self.db.updateAccount(io, &self.account)) {
+                            self.callChangeState(.Disconnected);
+                        }
                     } else {
                         var pinAccount: [6]u8 = undefined;
-                        self.account.pinBits.toChars(&pinAccount);
+                        self.account.pinPassword.toChars(pinAccount[0..]);
+                        std.debug.print("{c}{c}-{c}{c}-{c}{c}\n", .{ pinAccount[0], pinAccount[1], pinAccount[2], pinAccount[3], pinAccount[4], pinAccount[5] });
                         if (!std.mem.eql(u8, pinAccount[0..], pin.numeric[0..])) {
-                            self.sendPulse(packet.Opcode.PINFAIL) catch {
+                            self.sendPulse(packet.Opcode.PIN_FAIL) catch {
                                 self.callChangeState(.Disconnected);
                                 return;
                             };
@@ -246,33 +256,53 @@ pub const Peer = struct {
             }
         }
 
-        var charList = packet.PacketCharList{
-            .header = .{
-                .operationCode = packet.Opcode.CHARLIST,
+        var charList = std.mem.zeroInit(packet.PacketCharList, .{
+            .header = packet.Header{
                 .index = @intCast(self.userID),
-                .time = 0,
-                .verifier = undefined,
+                .operationCode = @intFromEnum(packet.Opcode.CHAR_LIST),
+                .time = std.time.epoch.unix,
             },
-            .cargo = self.account.cargo,
-            .cash = 0,
-            .characters = .{
-                .exp = [4]u32{ 0, 0, 0, 0 },
-                .guild = [4]u16{ 0, 0, 0, 0 },
-                .name = undefined,
-                .inventory = undefined,
-                .positionX = [4]i16{ 0, 0, 0, 0 },
-                .positionY = [4]i16{ 0, 0, 0, 0 },
-                .stats = undefined,
-                .gold = [_]i32{1000} ** 4,
-            },
-            .dorimee = 0,
-            .gold = 1000,
-            .keys = undefined,
+            .gold = self.account.gold,
             .name = self.account.name,
-        };
-        self.sendPacket(packet.PacketCharList, &charList) catch {
+            .characters = packet.PacketCharListData.from(self.account),
+        });
+
+        self.sendPacket(packet.PacketCharList, &charList) catch |err| {
+            logger.err("failed to sent charlist: {s}", .{@errorName(err)});
             return false;
         };
         return true;
+    }
+
+    fn onCreateCharacter(self: *Peer, io: Io, request: packet.PacketCharCreate) bool {
+        const slot: usize = @intCast(request.slot);
+        var account = &self.account;
+
+        if ((slot < 0 or slot > 4) or account.characters[slot].name[0] != 0) {
+            self.sendPulse(.CHAR_CREATE_FAIL) catch {
+                return false;
+            };
+            self.sendTextMessage("impossivel") catch {
+                return false;
+            };
+            return false;
+        }
+
+        var char = &account.characters[slot];
+        const name = std.mem.sliceTo(request.name[0..], 0);
+
+        if (std.mem.eql(u8, name, "GM")) {
+            self.sendPulse(.CHAR_CREATE_FAIL) catch {
+                return false;
+            };
+            return false;
+        }
+
+        @memcpy(char.name[0..name.len], name[0..]);
+
+        char.positionX = 2112;
+        char.positionY = 2112;
+
+        return self.db.updateAccount(io, account);
     }
 };

@@ -179,10 +179,10 @@ pub const Server = struct {
         }
     }
 
-    fn getEmptySlot(self: *Server) ?usize {
-        for (self.peers, 0..) |peer, id| {
+   fn getEmptySlot(self: *Server) ?usize {
+        for (1..self.peers.len) |id| {
             // empty or disconnected
-            if (@intFromEnum(peer.state) & 0b10 == 0) {
+            if (@intFromEnum(self.peers[id].state) & 0b10 == 0) {
                 return id;
             }
         }

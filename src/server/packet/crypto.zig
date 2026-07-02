@@ -30,7 +30,6 @@ pub fn descrypt(bMessage: []u8) !packet.Header {
     const checksum = bMessage[3];
 
     const keyword = keywords[iKeyword];
-    std.debug.print("Header = ({d}, {d}, {X}) \n", .{ size, iKeyword, checksum });
     for (4..size, 0..) |i, count| {
         const byte = bMessage[i];
 
@@ -49,8 +48,6 @@ pub fn descrypt(bMessage: []u8) !packet.Header {
         sum = sum +% (byte -% deByte);
     }
 
-    std.debug.print("{s}\n", .{bMessage[0..size]});
-    std.debug.print("checksum({X}) must be {X}\n", .{ sum, checksum });
     if (sum != checksum) {
         return error.EncryptInvalid;
     }

@@ -3,6 +3,7 @@ const zon = std.zon;
 const db = @import("database");
 const Database = db.Database;
 const Account = db.Account;
+const CharacterClass = db.CharacterClass;
 const Item = db.Item;
 
 const cwd = std.Io.Dir.cwd();

@@ -3,7 +3,10 @@ const std = @import("std");
 const decoder = @import("packet/decode.zig");
 const encoder = @import("packet/encode.zig");
 const packet = @import("packet/packet.zig");
+
+const domain = @import("core").domains;
 const Account = @import("core").domains.Account;
+const Character = @import("core").domains.Character;
 
 const Io = std.Io;
 const net = Io.net;
@@ -28,6 +31,12 @@ pub const Peer = struct {
         Disconnected = 0b0100,
     };
 
+    pub const PlayerState = struct {
+        positionX: i16 = 0,
+        positionY: i16 = 0,
+        charSelected: i8 = 0,
+    };
+
     userID: u32,
     stream: Stream,
     state: State,
@@ -39,6 +48,7 @@ pub const Peer = struct {
     writer: net.Stream.Writer,
 
     account: Account,
+    playerState: PlayerState = .{},
 
     fnChangeState: ?FNChangeState,
     userdata: *anyopaque,
@@ -103,7 +113,7 @@ pub const Peer = struct {
         group.async(io, Peer.readMessages, .{ self, io, reader });
     }
 
-    pub fn sendTextMessage(self: *Peer, text: []const u8) !void {
+    pub fn sendTextMessage(self: *Peer, comptime format: []const u8, args: anytype) !void {
         var writer = &self.writer.interface;
 
         const header = packet.Header{
@@ -115,13 +125,13 @@ pub const Peer = struct {
 
         var message = packet.PacketTextMessage{
             .header = header,
-            .message = undefined,
         };
 
-        const min = @min(96, text.len);
-        @memcpy(message.message[0..min], text[0..min]);
+        const text = std.fmt.bufPrint(message.message[0..], format, args) catch {
+            return error.FormatMessage;
+        };
 
-        logger.debug("sending message: {s}", .{message.message});
+        logger.debug("sending message: {s}", .{text});
 
         const encoded = encoder.encode(packet.PacketTextMessage, &message) catch |err| {
             logger.err("failed to encode message: {s}", @errorName(err));
@@ -133,9 +143,13 @@ pub const Peer = struct {
         try writer.flush();
     }
 
-    pub fn sendPacket(self: *Peer, comptime T: anytype, message: *T) !void {
-        var writer = &self.writer.interface;
+    pub fn sendPacket(self: *Peer, message: anytype) !void {
+        const T = switch (@typeInfo(@TypeOf(message))) {
+            .pointer => |t| t.child,
+            else => @compileError("message must be a pointer"),
+        };
 
+        var writer = &self.writer.interface;
         const encoded = encoder.encode(T, message) catch |err| {
             logger.err("failed to encode message: {s}", @errorName(err));
             return err;
@@ -155,7 +169,6 @@ pub const Peer = struct {
         };
 
         return try self.sendPacket(
-            packet.Header,
             &header,
         );
     }
@@ -186,10 +199,9 @@ pub const Peer = struct {
                 return;
             };
 
-            logger.debug("[{d}] received {b64}", .{ userID, data });
             const packetDecoded = decoder.decode(data) catch |err| {
                 logger.debug("[{d}] failed to accept message: {s}", .{ userID, @errorName(err) });
-                self.sendTextMessage("cliente invalido") catch {};
+                self.sendTextMessage("client is invalid", .{}) catch {};
                 self.callChangeState(.Invalid);
                 continue;
             };
@@ -198,7 +210,7 @@ pub const Peer = struct {
             switch (packetDecoded) {
                 .login => |login| {
                     if (!self.onLogin(io, login)) {
-                        self.sendTextMessage("usuario ou senha invalido") catch {
+                        self.sendTextMessage("username or password is invalid", .{}) catch {
                             logger.err("failed to respond", .{});
                         };
                         self.callChangeState(.Invalid);
@@ -211,8 +223,18 @@ pub const Peer = struct {
                 .charCreate => |req| {
                     logger.debug("create new char: {s} class: {s}", .{ req.name, @tagName(req.class) });
                     if (!self.onCreateCharacter(io, req)) {
+                        self.sendTextMessage("failed to delete character", .{}) catch {};
                         logger.err("failed to create char", .{});
                     }
+                },
+                .charDelete => |req| {
+                    if (!self.onDeleteCharacter(io, req)) {
+                        self.sendTextMessage("password is invalid", .{}) catch {};
+                        logger.err("failed to delete char", .{});
+                    }
+                },
+                .enterWorld => |req| {
+                    self.onEnterWorld(io, req);
                 },
                 .pin => |pin| {
                     if (self.account.mode == .unset) {
@@ -234,11 +256,94 @@ pub const Peer = struct {
                         }
                     }
                 },
-                .unknown => |header| {
-                    logger.debug("[{d}] Unknown opcode: {X}", .{ userID, header.operationCode });
+                .moveItem => |req| {
+                    self.onMoveItem(io, req);
+                },
+                .moviment => |req| {
+                    self.onAction(req);
+                },
+                .unknown => |unk| {
+                    logger.debug("[{d}] Unknown opcode: {X}", .{ userID, unk.operationCode });
                 },
             }
         }
+    }
+
+    fn onAction(self: *Peer, req: packet.PacketActionInput) void {
+        var request = req;
+
+        logger.info("pos({any}) to ({any})", .{ req.position, req.destination });
+        request.header.time = @intCast(self.lastReceiveTime);
+        request.header.operationCode = 0x369;
+        request.position = req.position;
+        request.header.index = @intCast(self.userID);
+        request.command = [_]u8{0} ** 24;
+        request.kind = 0;
+        request.speed = req.speed * 10;
+
+        self.sendPacket(&request) catch {};
+    }
+
+    fn onEnterWorld(self: *Peer, io: Io, req: packet.PacketEnterWorldInput) void {
+        const slot: usize = @intCast(req.charSlot);
+        if (slot > 4) {
+            self.sendTextMessage("try again", .{}) catch {};
+            return;
+        }
+
+        logger.info("ID: {d}", .{req.header.index});
+        const char = &self.account.characters[slot];
+        if (char.name[0] == 0) {
+            self.sendTextMessage("character is invalid", .{}) catch {};
+            return;
+        }
+
+        self.account.charSelected = @intCast(req.charSlot);
+        self.playerState.charSelected = @intCast(req.charSlot);
+        self.playerState.positionX = char.positionX;
+        self.playerState.positionY = char.positionY;
+
+        if (!self.db.updateAccount(io, &self.account)) {
+            return;
+        }
+
+        char.positionX = 2112;
+        char.positionY = 2042;
+
+        var output = packet.PacketEnterWorldOutput{
+            .header = .{
+                .index = 0x7530,
+                .operationCode = @intFromEnum(packet.Opcode.ENTERED_WORLD),
+                .time = 0,
+            },
+            .position = .{ .x = char.positionX, .y = char.positionY },
+            .character = .from(@intCast(self.userID), char),
+        };
+
+        self.sendPacket(&output) catch {
+            return;
+        };
+
+        var trenier = std.mem.zeroInit(packet.PacketSpawnOutput, .{
+            .header = .{
+                .operationCode = 0x364,
+                .index = 0x7530,
+            },
+            .position = .{ .x = char.positionX, .y = char.positionY },
+            .mob = .{
+                .entityId = @as(u16, @intCast(self.userID)),
+                .stats = packet.CharStatsData.from(char.stats),
+            },
+        });
+
+        @memcpy(trenier.mob.name[0..], char.name[0..12]);
+
+        inline for (0..16) |id| {
+            trenier.mob.items[id] = char.equipments[id].itemID;
+        }
+
+        self.sendPacket(&trenier) catch {};
+        return;
     }
 
     fn onLogin(self: *Peer, io: Io, login: packet.PacketLogin) bool {
@@ -256,10 +361,73 @@ pub const Peer = struct {
             }
         }
 
+        std.debug.print("tam = {d}\n", .{@sizeOf(packet.PacketCharList)});
+        self.sendCharacterList(.CHAR_LIST);
+        return true;
+    }
+
+    fn onMoveItem(self: *Peer, io: Io, req: packet.PacketMoveItemInput) void {
+        self.swapItem(
+            io,
+            req.sourceSlot,
+            req.sourceStorage,
+            req.destSlot,
+            req.destStorage,
+        );
+    }
+
+    fn getItem(self: *Peer, slot: u8, storage: packet.StorageType) ?*domain.Item {
+        const char = &self.account.characters[@intCast(self.playerState.charSelected)];
+        return switch (storage) {
+            .equip => &char.equipments[slot],
+            .inventory => &char.carry[slot],
+            .cargo => return &self.account.cargo[slot],
+        };
+    }
+
+    fn swapItem(
+        self: *Peer,
+        io: Io,
+        sourceSlot: u8,
+        sourceStorage: packet.StorageType,
+        destSlot: u8,
+        destStorage: packet.StorageType,
+    ) void {
+        const sourceItem = self.getItem(sourceSlot, sourceStorage) orelse return;
+        const destItem = self.getItem(destSlot, destStorage) orelse return;
+
+        var from = packet.PacketCreateItemOutput{
+            .header = .{
+                .operationCode = @intFromEnum(packet.Opcode.CREATE_ITEM),
+                .index = @intCast(self.userID),
+                .time = std.time.epoch.unix,
+            },
+            .slot = sourceSlot,
+            .slotType = @intCast(@intFromEnum(sourceStorage)),
+            .item = .{ .index = destItem.itemID, .effects = destItem.effect },
+        };
+
+        var to = packet.PacketCreateItemOutput{
+            .header = from.header,
+            .slot = destSlot,
+            .slotType = @intCast(@intFromEnum(destStorage)),
+            .item = .{ .index = sourceItem.itemID, .effects = sourceItem.effect },
+        };
+
+        self.sendPacket(&from) catch {};
+        self.sendPacket(&to) catch {};
+
+        const copy = sourceItem.*;
+        sourceItem.* = destItem.*;
+        destItem.* = copy;
+        _ = self.db.updateAccount(io, &self.account);
+    }
+
+    fn sendCharacterList(self: *Peer, opcode: packet.Opcode) void {
         var charList = std.mem.zeroInit(packet.PacketCharList, .{
             .header = packet.Header{
                 .index = @intCast(self.userID),
-                .operationCode = @intFromEnum(packet.Opcode.CHAR_LIST),
+                .operationCode = @intFromEnum(opcode),
                 .time = std.time.epoch.unix,
             },
             .gold = self.account.gold,
@@ -267,14 +435,51 @@ pub const Peer = struct {
             .characters = packet.PacketCharListData.from(self.account),
         });
 
-        self.sendPacket(packet.PacketCharList, &charList) catch |err| {
+        self.sendPacket(&charList) catch |err| {
             logger.err("failed to sent charlist: {s}", .{@errorName(err)});
+        };
+    }
+
+    fn onDeleteCharacter(self: *Peer, io: Io, request: packet.PacketCharDeleteInput) bool {
+        const slot: usize = @intCast(request.slot);
+
+        const char = &self.account.characters[slot];
+        if (char.name[0] == 0) {
+            return false;
+        }
+
+        const password = std.mem.sliceTo(self.account.password[0..], 0);
+        const passwordRequest = std.mem.sliceTo(request.password[0..], 0);
+
+        if (!std.mem.eql(u8, password[0..], passwordRequest[0..])) {
+            return false;
+        }
+
+        // all bytes to zero
+        char.* = std.mem.zeroes(Character);
+        if (!self.db.updateAccount(io, &self.account)) {
+            return false;
+        }
+
+        var output = packet.PacketCharDeleteOutput{
+            .header = .{
+                .index = @intCast(self.userID),
+                .operationCode = @intFromEnum(packet.Opcode.CHAR_DELETED),
+                .time = 0,
+            },
+            .characters = .from(self.account),
+        };
+
+        self.sendPacket(&output) catch {
             return false;
         };
+
+        const name = std.mem.sliceTo(request.name[0..], 0);
+        self.sendTextMessage("{s} was deleted", .{name}) catch {};
         return true;
     }
 
-    fn onCreateCharacter(self: *Peer, io: Io, request: packet.PacketCharCreate) bool {
+    fn onCreateCharacter(self: *Peer, io: Io, request: packet.PacketCharCreateInput) bool {
         const slot: usize = @intCast(request.slot);
         var account = &self.account;
 
@@ -282,13 +487,15 @@ pub const Peer = struct {
             self.sendPulse(.CHAR_CREATE_FAIL) catch {
                 return false;
             };
-            self.sendTextMessage("impossivel") catch {
+            self.sendTextMessage("try again operation", .{}) catch {
                 return false;
             };
             return false;
         }
 
         var char = &account.characters[slot];
+
+        char.* = Character.fromClass(@enumFromInt(@intFromEnum(request.class)));
         const name = std.mem.sliceTo(request.name[0..], 0);
 
         if (std.mem.eql(u8, name, "GM")) {
@@ -302,7 +509,28 @@ pub const Peer = struct {
 
         char.positionX = 2112;
         char.positionY = 2112;
+        char.class = @enumFromInt(@intFromEnum(request.class));
 
-        return self.db.updateAccount(io, account);
+        if (!self.db.updateAccount(io, account)) {
+            return false;
+        }
+
+        var pack = packet.PacketCharCreateOutput{
+            .header = .{
+                .index = @intCast(self.userID),
+                .operationCode = @intFromEnum(packet.Opcode.CHAR_CREATED),
+                .time = std.time.epoch.unix,
+            },
+            .characters = .from(self.account),
+        };
+
+        self.sendPacket(&pack) catch {
+            return false;
+        };
+
+        self.sendTextMessage("{s} was created", .{request.name}) catch {
+            return false;
+        };
+        return true;
     }
 };

@@ -1,7 +1,7 @@
 const std = @import("std");
 
 pub const Item = extern struct {
-    itemID: i16,
+    itemID: u16,
     effect: [3]u16,
 
     pub fn zero() Item {

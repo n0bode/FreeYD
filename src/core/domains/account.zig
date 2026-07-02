@@ -10,15 +10,15 @@ pub const AccountMode = enum(u8) {
 
 pub const Account = extern struct {
     accountID: u64,
-    name: [16]u8,
-    password: [16]u8,
+    name: [16:0]u8,
+    password: [16:0]u8,
     pinPassword: PinPassword,
     server: u8,
     keys: [16]u8,
     ipAddr: [16]u8,
     gold: i32,
     charInfo: u32,
-    charSelected: u64,
+    charSelected: i8,
     cargo: [128]Item,
     mode: AccountMode = .unset,
     characters: [4]Character,

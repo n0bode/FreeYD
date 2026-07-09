@@ -1,29 +1,51 @@
 package main
 
 import (
-	"log"
+	"context"
+	"errors"
+	"fmt"
 	"log/slog"
-	"net/http"
+	"net"
+	"os"
+	"os/signal"
+	"time"
 )
 
 func main() {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("GET /serv00", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("100\r\n1\r\n1\r\n"))
-	})
-
-	mux.HandleFunc("GET /serv01", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("100\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n"))
-	})
-
-	middleware := func(next http.Handler) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			log.Printf("[%s] %s", r.Method, r.URL.Path)
-			next.ServeHTTP(w, r)
-		}
+	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
+	var lc net.ListenConfig
+	listen, err := lc.Listen(ctx, "tcp", "0.0.0.0:8080")
+	if err != nil {
+		slog.Error("failed to listen http", "err", err)
+		return
 	}
-	if err := http.ListenAndServe(":8080", middleware(mux)); err != nil {
-		slog.Error("failed", err)
+
+	go func() {
+		<-ctx.Done()
+		slog.Info("programa foi interrompido")
+		listen.Close()
+	}()
+
+	for {
+		slog.Debug("esperando conexao")
+		conn, err := listen.Accept()
+		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
+			slog.Warn("erro ao conectar ao nova conexao", "err", err)
+			continue
+		}
+
+		content := `100\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n`
+		now := time.Now().Format("%a, %d %b %Y %H:%M:%S %Z")
+		fmt.Fprintf(conn, "HTTP/1.1 200 OK\r\n")
+		fmt.Fprintf(conn, "Date: %s\r\n", now)
+		fmt.Fprintf(conn, "Content-Length: %d\r\n", len(content))
+		fmt.Fprint(conn, "Connection: close\r\n")
+		fmt.Fprintf(conn, "\r\n")
+		fmt.Fprint(conn, content)
+
+		conn.Close()
 	}
 }

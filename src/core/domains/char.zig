@@ -56,7 +56,12 @@ pub const Character = extern struct {
     regenMp: i8,
     attackSpeed: u16,
 
-    resists: [4]i8, // fire ice, element
+    resists: packed struct(u32) {
+        ice: u8,
+        fire: u8,
+        element: u8,
+        lighting: u8,
+    },
     pub fn fromClass(class: Class) Character {
         var defaults = switch (class) {
             .BM => std.mem.zeroInit(Character, .{

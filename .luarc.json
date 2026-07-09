@@ -1,0 +1,17 @@
+{
+    "$schema": "https://raw.githubusercontent.com/LuaLS/lua-language-server/master/meta/template/.luarc.schema.json",
+    "runtime": {
+        "version": "Lua 5.1",
+        "path": [
+            "?.lua",
+            "?/init.lua",
+            "lua_types/?.lua"
+        ]
+    },
+    "workspace": {
+        "library": [
+            "lua_types"
+        ],
+        "checkThirdParty": false
+    }
+}

@@ -4,6 +4,7 @@ const std = @import("std").mem.Allocator;
 const domain = @import("core").domains;
 pub const Account = domain.Account;
 pub const Item = domain.Item;
+pub const Character = domain.Character;
 
 //errors
 pub const LoginError = error{UsernameNotFound};

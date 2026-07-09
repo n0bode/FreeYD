@@ -3,10 +3,14 @@ const buiiltin = @import("builtin");
 const posix = std.posix;
 const Init = std.process.Init;
 
-const Server = @import("server/server.zig").Server;
-const ParseArgs = @import("parsearg/parsearg.zig").ParseArgs;
+const PacketFromClient = @import("network").packet.PacketFromClient;
+const Server = @import("network").Server;
+const Peer = @import("network").Peer;
+
+const ParseArgs = @import("utils").ParseArgs;
 const FileDB = @import("filedb").FileDB;
 const Account = @import("core").domains.Account;
+const Brain = @import("brain").Logic;
 
 var running = std.atomic.Value(bool).init(true);
 
@@ -71,14 +75,25 @@ pub fn main(init: Init) !void {
     var arena = std.heap.ArenaAllocator.init(init.gpa);
     defer arena.deinit();
 
+    var database = FileDB.init("dbs");
     const allocator = arena.allocator();
+
+    const b = try Brain.init(allocator, init.io, database.interface());
+    defer b.deinit();
+
+    try b.loadScripts(init.io);
 
     try args.parse(init.minimal.args.iterate(), &config);
     captureSignal();
 
-    var database = FileDB.init("dbs");
+    var server: Server = try Server.init(allocator, config.config, .{
+        .onReceivePacket = .{
+            .func = Brain.onReceiveMessage,
+            .userdata = b,
+        },
+    });
 
-    var server: Server = try Server.init(allocator, database.interface(), config.config);
+    b.setServer(&server);
     try server.run(init.io);
 
     std.debug.print("running server on {s}:{d}\n", .{ config.config.host, config.config.port });

@@ -43,16 +43,17 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
-    const dbMod = b.addModule("database", .{
-        // The root source file is the "entry point" of this module. Users of
-        // this module will only be able to access public declarations contained
-        // in this file, which means that if you have declarations that you
-        // intend to expose to consumers that were defined in other files part
-        // of this module, you will have to make sure to re-export them from
-        // the root file.
+    const utils = b.addModule("utils", .{
+        .root_source_file = b.path("src/utils/utils.zig"),
+        .target = target,
+    });
+
+    const network = b.addModule("network", .{ .root_source_file = b.path("src/network/network.zig"), .target = target, .imports = &.{
+        .{ .name = "core", .module = coreMod },
+    } });
+
+    const database = b.addModule("database", .{
         .root_source_file = b.path("src/db/database.zig"),
-        // Later on we'll use this module as the root module of a test executable
-        // which requires us to specify a target.
         .target = target,
         .imports = &.{
             .{ .name = "core", .module = coreMod },
@@ -60,18 +61,65 @@ pub fn build(b: *std.Build) void {
     });
 
     const fileDB = b.addModule("filedb", .{
-        // The root source file is the "entry point" of this module. Users of
-        // this module will only be able to access public declarations contained
-        // in this file, which means that if you have declarations that you
-        // intend to expose to consumers that were defined in other files part
-        // of this module, you will have to make sure to re-export them from
-        // the root file.
         .root_source_file = b.path("src/db/databases/filedb/filedb.zig"),
-        // Later on we'll use this module as the root module of a test executable
-        // which requires us to specify a target.
         .target = target,
         .imports = &.{
-            .{ .name = "database", .module = dbMod },
+            .{ .name = "database", .module = database },
+        },
+    });
+
+    const c_lua_source =
+        \\#include<luajit-2.1/lua.h>
+        \\#include<luajit-2.1/lualib.h>
+        \\#include<luajit-2.1/luajit.h>
+        \\#include<luajit-2.1/lauxlib.h>
+        \\
+    ;
+
+    const c_lua_step = b.addWriteFiles();
+    const c_lua_path = c_lua_step.add("c.c", c_lua_source);
+
+    const c_lua_translate = b.addTranslateC(.{
+        .optimize = optimize,
+        .root_source_file = c_lua_path,
+        .link_libc = true,
+        .target = target,
+    });
+
+    c_lua_translate.linkSystemLibrary("luajit", .{ .needed = true });
+    const c_lua_module = c_lua_translate.createModule();
+
+    const luamodule = b.addModule("lua", .{
+        .target = target,
+        .optimize = optimize,
+        //.link_libc = true,
+        .root_source_file = b.path("src/lua/lua.zig"),
+        .imports = &.{
+            .{ .name = "c", .module = c_lua_module },
+        },
+    });
+
+    const lua_binding = b.addModule("lua_binding", .{
+        .target = target,
+        .optimize = optimize,
+        .root_source_file = b.path("src/lua/bindings/binding.zig"),
+        .imports = &.{
+            .{ .name = "lua", .module = luamodule },
+            .{ .name = "network", .module = network },
+            .{ .name = "core", .module = coreMod },
+            .{ .name = "database", .module = database },
+        },
+    });
+
+    const serverlogic = b.addModule("serverlogic", .{
+        .root_source_file = b.path("src/core/serverlogic/serverlogic.zig"),
+        .target = target,
+        .imports = &.{
+            .{ .name = "core", .module = coreMod },
+            .{ .name = "database", .module = database },
+            .{ .name = "network", .module = network },
+            .{ .name = "lua", .module = luamodule },
+            .{ .name = "lua_binding", .module = lua_binding },
         },
     });
 
@@ -105,16 +153,13 @@ pub fn build(b: *std.Build) void {
             // definition if desireable (e.g. firmware for embedded devices).
             .target = target,
             .optimize = optimize,
-            // List of modules available for import in source files part of the
-            // root module.
             .imports = &.{
-                // import this module (e.g. `@import("zwyd")`). The name is
-                // repeated because you are allowed to rename your imports, which
-                // can be extremely useful in case of collisions (which can happen
-                // importing modules from different packages).
                 .{ .name = "core", .module = coreMod },
-                .{ .name = "db", .module = dbMod },
+                .{ .name = "db", .module = database },
                 .{ .name = "filedb", .module = fileDB },
+                .{ .name = "brain", .module = serverlogic },
+                .{ .name = "network", .module = network },
+                .{ .name = "utils", .module = utils },
             },
         }),
     });
@@ -158,15 +203,25 @@ pub fn build(b: *std.Build) void {
         .root_module = coreMod,
     });
 
+    const binding_mod_tests = b.addTest(.{
+        .root_module = lua_binding,
+    });
+
+    const lua_mod_test = b.addTest(.{
+        .root_module = luamodule,
+    });
+
     // A run step that will run the test executable.
     const run_mod_tests = b.addRunArtifact(mod_tests);
+
+    const run_binding_mod_tests = b.addRunArtifact(binding_mod_tests);
+
+    const run_lua_mod_tests = b.addRunArtifact(lua_mod_test);
 
     // Creates an executable that will run `test` blocks from the executable's
     // root module. Note that test executables only test one module at a time,
     // hence why we have to create two separate ones.
-    const exe_tests = b.addTest(.{
-        .root_module = exe.root_module,
-    });
+    const exe_tests = b.addTest(.{ .root_module = exe.root_module });
 
     // A run step that will run the second test executable.
     const run_exe_tests = b.addRunArtifact(exe_tests);
@@ -176,6 +231,8 @@ pub fn build(b: *std.Build) void {
     // make the two of them run in parallel.
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
+    test_step.dependOn(&run_lua_mod_tests.step);
+    test_step.dependOn(&run_binding_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
 
     // Just like flags, top level steps are also listed in the `--help` menu.

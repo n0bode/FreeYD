@@ -62,7 +62,7 @@ pub const FileDB = struct {
     ) bool {
         account.* = std.mem.zeroInit(Account, .{
             .accountID = self.rand.next(),
-            .mode = .unset,
+            .state = .unset,
         });
 
         @memcpy(account.name[0..username.len], username);
@@ -103,7 +103,7 @@ pub const FileDB = struct {
         var writerA = file.writer(io, self.writerBuffer[0..]);
         const writer = &writerA.interface;
 
-        writer.writeStruct(account.*, .native) catch {
+        writer.writeStruct(account.*, .little) catch {
             return false;
         };
         writer.flush() catch {};

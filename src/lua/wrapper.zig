@@ -228,7 +228,10 @@ pub const State = struct {
     }
 
     pub fn loadFile(self: State, path: []const u8) !void {
-        if (c.luaL_loadfile(self.L, path.ptr) != c.LUA_OK) {
+        const nPath = try self.allocator.dupeZ(u8, path);
+        defer self.allocator.free(nPath);
+
+        if (c.luaL_loadfile(self.L, nPath) != c.LUA_OK) {
             std.log.err("failed to load file ({s}): {s}", .{ path, self.toString(-1) });
             return error.LoadFileError;
         }

@@ -174,8 +174,6 @@ pub const State = struct {
         //self.L = c.luaL_newstate();
         self.L = c.lua_newstate(Malloc, self);
 
-        //self.bindingLogger();
-        _ = c.lua_atpanic(self.L, luaPanicCallback);
         c.luaL_openlibs(self.L);
         _ = c.lua_atpanic(self.L, luaPanicCallback);
         self.bindingLogger();
@@ -360,15 +358,6 @@ pub const State = struct {
         self.setGlobal(methodName);
     }
 
-    fn printLua(L: ?*c.lua_State) callconv(.c) c_int {
-        var len: usize = 0;
-        const pText = c.lua_tolstring(L, -1, &len);
-        const text = pText[0..len];
-
-        std.log.debug("lua: {s}", .{text});
-        return 0;
-    }
-
     pub fn addPrint(self: State) void {
         //c.lua_pushlightuserdata(self.L, @ptrCast(@constCast(func)));
         c.lua_pushcclosure(self.L, State.printLua, 0);
@@ -487,6 +476,10 @@ pub const State = struct {
         c.lua_createtable(self.L, @intCast(nArr), @intCast(nRec));
     }
 
+    pub fn newTable(self: *State) void {
+        self.createTable(0, 0);
+    }
+
     pub fn getField(self: State, idx: i32, name: []const u8) void {
         c.lua_getfield(self.L, @intCast(idx), name.ptr);
     }
@@ -551,6 +544,14 @@ pub const State = struct {
         var size: usize = 0;
         const text = c.luaL_checklstring(self.L, idx, &size);
         return text[0..size];
+    }
+
+    pub fn checkInteger(self: State, idx: i32) i64 {
+        return @intCast(c.luaL_checkinteger(self.L, idx));
+    }
+
+    pub fn checkNumber(self: State, idx: i32) f64 {
+        return @floatCast(c.luaL_checknumber(self.L, idx));
     }
 };
 

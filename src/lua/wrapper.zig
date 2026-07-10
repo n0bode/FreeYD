@@ -76,9 +76,10 @@ fn wrapCFunc(L: LuaState) callconv(.c) c_int {
     return 0;
 }
 
+const logger = std.log.scoped(.lua);
 fn printLua(state: *State) i32 {
     const str = state.toString(-1);
-    std.log.info("lua printf('{s}')", .{str});
+    logger.info("lua printf('{s}')", .{str});
     return 0;
 }
 
@@ -115,31 +116,51 @@ pub const LuaType = enum(c_int) {
     None = c.LUA_TNONE,
 };
 
+fn proxyLog(L: *State, log: fn (comptime []const u8, anytype) void) void {
+    switch (L.getLuaType(-1)) {
+        .String => {
+            const str = L.toString(-1);
+            log("{s}", .{str});
+        },
+        .Number => {
+            const num = L.toNumber(-1);
+            log("{any}", .{num});
+        },
+        .Bool => {
+            const b = L.toBoolean(-1);
+            log("{any}", .{b});
+        },
+        .Userdata => {
+            const ptr = L.toUserdataPtr(-1);
+            if (L.getMetatable(-1)) {
+                L.getField(-1, "__name");
+                const name = L.toString(-1);
+                log("({s})#{any}", .{ name, ptr });
+            } else {
+                log("userdata(#{any})", .{ptr});
+            }
+        },
+        else => {},
+    }
+}
+
 fn lua__info_logger(L: *State) i32 {
-    const text = L.checkString(-1);
-    const logger = std.log.scoped(.lua);
-    logger.info("{s}", .{text});
+    proxyLog(L, logger.info);
     return 0;
 }
 
 fn lua__debug_logger(L: *State) i32 {
-    const text = L.checkString(-1);
-    const logger = std.log.scoped(.lua);
-    logger.debug("{s}", .{text});
+    proxyLog(L, logger.debug);
     return 0;
 }
 
 fn lua__error_logger(L: *State) i32 {
-    const text = L.checkString(-1);
-    const logger = std.log.scoped(.lua);
-    logger.err("{s}", .{text});
+    proxyLog(L, logger.err);
     return 0;
 }
 
 fn lua__warn_logger(L: *State) i32 {
-    const text = L.checkString(-1);
-    const logger = std.log.scoped(.lua);
-    logger.warn("{s}", .{text});
+    proxyLog(L, logger.warn);
     return 0;
 }
 
@@ -156,6 +177,9 @@ pub const State = struct {
         //self.bindingLogger();
         _ = c.lua_atpanic(self.L, luaPanicCallback);
         c.luaL_openlibs(self.L);
+        _ = c.lua_atpanic(self.L, luaPanicCallback);
+        self.bindingLogger();
+        self.register("print", printLua);
         ArrayWrapper.bind(self);
 
         return self;
@@ -279,8 +303,19 @@ pub const State = struct {
         self.getField(c.LUA_REGISTRYINDEX, name);
     }
 
-    pub fn getMetatable(self: State, idx: i32) i32 {
-        return c.lua_getmetatable(self.L, idx);
+    pub fn getMetatable(self: State, idx: i32) bool {
+        return c.lua_getmetatable(self.L, idx) == 1;
+    }
+
+    pub fn getMetatableName(self: State, idx: i32) ?[]const u8 {
+        if (self.getMetatable(idx)) {
+            self.getField(-1, "__name");
+            const name = self.toString(-1);
+            // remove metatable
+            self.pop(1);
+            return name;
+        }
+        return null;
     }
 
     pub fn hasMetatable(self: State, name: []const u8) bool {

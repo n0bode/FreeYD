@@ -1,5 +1,6 @@
 const State = @import("binding.zig").lua.State;
 const network = @import("binding.zig").network;
+const std = @import("std");
 
 const Peer = network.Peer;
 

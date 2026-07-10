@@ -1,4 +1,6 @@
 local server = require("server")
+local logger = require("logger")
+
 server:on("on_pinpassword", function(peer, req)
     local db = server:get_database()
     if db == nil then
@@ -13,16 +15,17 @@ server:on("on_pinpassword", function(peer, req)
     end
 
     local password = req.numeric
-    -- se for um conta nova seta um novo password
-    if account.state == AccountState.NEW_ACCCOUNT then
+    if account.state == AccountState.NEW_ACCOUNT then
         account.pin_password = password
-    elseif password == account.pin_password then
-        peer:send_text("try again")
-        return true
+        peer:send_text("new password created")
+    else
+        if account.pin_password ~= password then
+            peer:send_text("password incorrect")
+            return false
+        end
     end
 
-    account.state = AccountState.LOGGED
-    account:save(db)
-    peer:send_text("welcome to jungle")
+    account.state = AccountState.LOGGED;
+    account:save(db);
     return true
 end)

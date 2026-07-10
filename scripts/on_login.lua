@@ -1,23 +1,48 @@
 local server = require("server")
+local logger = require("logger")
+
+local function signup(db, req)
+    return db:create_account({
+        username = req.username,
+        password = req.password,
+        email = "email.com",
+    })
+end
+
 server:on("on_login", function(peer, req)
+    logger:info("iniciando o login")
     local db = server:get_database()
-    peer:send_text("ops..")
     if db == nil then
         peer:send_text("ops.. try again soon")
         return false
     end
 
-    print("user by credentials")
-    local account = db:get_account_by_credentials(req.username, req.password)
+    local account = db:get_account_by_username(req.username)
+    if account then
+        logger:info("account found for username: " .. req.username)
+        if account.password ~= req.password then
+            logger:info("password invalid for username: " .. req.username)
+            peer:send_text("username or password is invalid")
+            return false
+        end
+    else
+        account = signup(db, req)
+        if account == nil then
+            peer:send_text("username or password is invalid")
+            return false
+        end
+    end
 
-    print("checking account is null")
-    if account == nil then
-        peer:send_text("username or password is invalid")
+    if account.state == AccountState.LOGGED then
+        logger:info("account already logged: " .. req.username)
+        peer:send_text("account is already logged in")
         return false
     end
 
-    print("set account")
     peer:associate(account);
-
     return true
 end)
+
+for nome, valor in pairs(AccountState) do
+    print("Nome do Estado: " .. nome .. " -> Valor Numérico: " .. valor)
+end

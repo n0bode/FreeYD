@@ -413,3 +413,7 @@ pub const PacketCharCreateOuput = extern struct {
 pub const PacketCharDeleteOutput = extern struct {
     characters: PacketCharListData,
 };
+
+pub const PacketEmpty = extern struct {
+    header: Header,
+};

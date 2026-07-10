@@ -98,7 +98,7 @@ pub const Server = struct {
         try self.group.concurrent(io, Server.waitAcceptConnect, .{ self, io });
     }
 
-    pub fn stop(self: *Server, io: std.Io) void {
+    pub fn stop(self: *Server, io: std.Io) !void {
         if (self.state == .running) {
             self.state = .disconnecting;
             self.group.cancel(io);
@@ -108,6 +108,7 @@ pub const Server = struct {
             }
             self.state = .disconnected;
         }
+        try self.group.await(io);
     }
 
     fn waitAcceptConnect(self: *Server, io: std.Io) void {
@@ -155,7 +156,6 @@ pub const Server = struct {
             );
 
             logger.debug("{d} peer accepted", .{peerId});
-
             if (self.peers[peerId]) |peer| {
                 peer.accept(io, &self.group) catch |err| {
                     switch (err) {

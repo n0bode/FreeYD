@@ -39,10 +39,8 @@ server:on("on_login", function(peer, req)
         return false
     end
 
-    peer:associate(account);
+    account.state = AccountState.LOGGED
+    account:save(db)
+    peer:associate(account)
     return true
 end)
-
-for nome, valor in pairs(AccountState) do
-    print("Nome do Estado: " .. nome .. " -> Valor Numérico: " .. valor)
-end

@@ -14,6 +14,8 @@ const Brain = @import("brain").Logic;
 
 var running = std.atomic.Value(bool).init(true);
 
+const logger = std.log.scoped(.main);
+
 const isWindows = buiiltin.os.tag == .windows;
 
 fn handleSignal(sig: posix.SIG) callconv(.c) void {
@@ -96,13 +98,17 @@ pub fn main(init: Init) !void {
     b.setServer(&server);
     try server.run(init.io);
 
-    std.debug.print("running server on {s}:{d}\n", .{ config.config.host, config.config.port });
+    logger.info("running server on {s}:{d}\n", .{ config.config.host, config.config.port });
     const delay = std.Io.Duration.fromMilliseconds(10 * 3);
+
     std.debug.print(">> Ctrl+C: to kill server\n", .{});
     while (running.load(.monotonic)) {
         try init.io.sleep(delay, .awake);
     }
 
     std.debug.print("shutting...\n", .{});
-    server.stop(init.io);
+    server.stop(init.io) catch |err| {
+        logger.err("stop server failed: {any}", .{err});
+    };
+    logger.info("server shutdowned", .{});
 }

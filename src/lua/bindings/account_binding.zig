@@ -38,7 +38,6 @@ fn bindEnums(L: *lua.State) void {
     L.newTable();
     inline for (std.meta.fields(domain.AccountState)) |option| {
         L.pushInteger(option.value);
-        std.debug.print("name: {s}\n", .{option.name});
         L.setField(-2, option.name);
     }
     L.setGlobal("AccountState");

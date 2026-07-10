@@ -1,6 +1,6 @@
 const std = @import("std");
 pub const bindings = @import("lua_binding");
-const ServerBinding = @import("binding.zig").ServerBinding;
+const ServerBinding = @import("server_binding.zig").ServerBinding;
 
 const Allocator = std.mem.Allocator;
 pub const dblib = @import("database");

@@ -425,11 +425,12 @@ pub const State = struct {
                 switch (@typeInfo(pT.child)) {
                     .@"struct" => {
                         // more eficient
-                        const mtName = "mt_" ++ @typeName(T);
+                        const mtName = "mt_" ++ @typeName(pT.child);
                         if (self.hasMetatable(mtName)) {
                             const ptr = self.newUserdata(T);
                             ptr.* = data;
                             self.getMetatableByName(mtName);
+                            self.checkType(-1, .Table);
                             _ = self.setMetatable(-2);
                         } else {
                             self.pushNil();

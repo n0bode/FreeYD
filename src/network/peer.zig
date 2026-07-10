@@ -32,7 +32,7 @@ pub const PeerCallback = struct {
     },
     onReceivePacket: ?struct {
         userdata: *anyopaque,
-        func: *const fn (*anyopaque, *Peer, *PacketInput) bool,
+        func: *const fn (*anyopaque, *Peer, ?*PacketInput) bool,
     },
 };
 
@@ -68,6 +68,17 @@ pub const Peer = struct {
 
     lastReceiveTime: u64 = 0,
     callbacks: PeerCallback,
+
+    pub fn initAlloc(
+        allocator: std.mem.Allocator,
+        userID: u32,
+        stream: Stream,
+        callbacks: PeerCallback,
+    ) !*Peer {
+        const peer = try allocator.create(Peer);
+        peer.* = Peer.init(userID, stream, callbacks);
+        return peer;
+    }
 
     pub fn init(
         userID: u32,
@@ -158,23 +169,23 @@ pub const Peer = struct {
     }
 
     pub fn sendCode(self: *Peer, code: u16) !void {
-        var header = Header{
-            .operationCode = code,
-            .index = @intCast(self.peerID),
-            .time = std.time.epoch.unix,
-            .verifier = undefined,
+        var packet = packets.PacketEmpty{
+            .header = .{
+                .operationCode = code,
+                .index = @intCast(self.peerID),
+                .time = std.time.epoch.unix,
+                .verifier = undefined,
+            },
         };
 
-        return try self.sendPacket(
-            &header,
-        );
+        return try self.sendPacket(&packet, true);
     }
 
     pub fn changeState(self: *Peer, state: State) void {
-        self.state = state;
         if (self.callbacks.onChangeState) |callback| {
             callback.func(callback.userdata, self.io, self, state);
         }
+        self.state = state;
     }
 
     pub fn disconnect(self: *Peer) void {
@@ -183,6 +194,7 @@ pub const Peer = struct {
 
     pub fn setAccount(self: *Peer, account: Account) void {
         self.account = account;
+        self.changeState(.Connected);
     }
 
     fn readMessages(self: *Peer, reader: *Io.Reader) void {
@@ -193,7 +205,7 @@ pub const Peer = struct {
         while (@intFromEnum(self.state) & 0b10 > 0) {
             const sizeBytes = reader.peekArray(2) catch |err| {
                 logger.warn("failed to get size {s}", .{@errorName(err)});
-                self.changeState(.Invalid);
+                self.changeState(.Disconnected);
                 return;
             };
 
@@ -201,14 +213,14 @@ pub const Peer = struct {
             logger.debug("[{d}] waiting message size={d}", .{ peerID, size });
             const data = reader.take(@intCast(size)) catch |err| {
                 logger.warn("failed to get message {s}", .{@errorName(err)});
-                self.changeState(.Invalid);
+                self.changeState(.Disconnected);
                 return;
             };
 
             var packetDecoded = PacketInput.decode(data) catch |err| {
                 logger.debug("[{d}] failed to accept message: {s}", .{ peerID, @errorName(err) });
                 self.sendTextMessage("client is invalid") catch {};
-                self.changeState(.Invalid);
+                self.changeState(.Disconnected);
                 continue;
             };
 

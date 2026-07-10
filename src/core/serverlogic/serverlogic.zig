@@ -100,7 +100,7 @@ pub const Logic = struct {
         self: *Logic,
         name: []const u8,
         peer: *network.Peer,
-        packet: *network.PacketInput,
+        packet: ?*network.PacketInput,
     ) bool {
         const L = self.L;
 
@@ -129,9 +129,15 @@ pub const Logic = struct {
     pub fn onReceivePacket(
         self: *Logic,
         peer: *network.Peer,
-        message: *network.PacketInput,
+        message: ?*network.PacketInput,
     ) bool {
-        switch (message.data) {
+        if (message == null) {
+            //disconnected
+            _ = self.callEvent("on_disconnected", peer, null);
+            return true;
+        }
+
+        switch (message.?.data) {
             .login => {
                 if (!self.callEvent("on_login", peer, message)) {
                     return false;
@@ -153,7 +159,7 @@ pub const Logic = struct {
     pub fn onReceiveMessage(
         ptr: *anyopaque,
         peer: *network.Peer,
-        message: *network.PacketInput,
+        message: ?*network.PacketInput,
     ) bool {
         const self: *Logic = @ptrCast(@alignCast(ptr));
         return self.onReceivePacket(peer, message);

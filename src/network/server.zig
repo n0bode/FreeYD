@@ -13,15 +13,21 @@ const PacketInput = @import("packet/packet.zig").PacketInput;
 pub const Callbacks = struct {
     onReceivePacket: ?struct {
         userdata: *anyopaque,
-        func: *const fn (*anyopaque, peer: *Peer, packet: *PacketInput) bool,
+        func: *const fn (*anyopaque, peer: *Peer, packet: ?*PacketInput) bool,
     } = null,
+};
+
+const LinkedList = std.SinglyLinkedList;
+
+const PeerListItem = struct {
+    peer: Peer,
+    node: LinkedList.Node = .{},
 };
 
 pub const Server = struct {
     pub const ServerConfig = struct {
         host: []const u8,
         port: u16,
-
         pub fn default() ServerConfig {
             return .{
                 .port = 8281,
@@ -42,7 +48,7 @@ pub const Server = struct {
     socketServer: ?net.Server,
     group: std.Io.Group,
     allocator: Allocator,
-    peers: []Peer,
+    peers: []?*Peer,
     callbacks: Callbacks,
 
     pub fn init(
@@ -65,9 +71,9 @@ pub const Server = struct {
             .callbacks = callbacks,
         };
 
-        self.peers = try allocator.alloc(Peer, 1024);
-        for (self.peers, 0..) |_, i| {
-            self.peers[i] = .empty();
+        self.peers = try allocator.alloc(?*Peer, 100);
+        for (self.peers, 0..) |_, slot| {
+            self.peers[slot] = null;
         }
         return self;
     }
@@ -108,7 +114,7 @@ pub const Server = struct {
         while (self.state == .running) {
             self.acceptConnection(io) catch |err| {
                 logger.warn("accept connection failed: {s}\n", .{@errorName(err)});
-                return;
+                continue;
             };
         }
     }
@@ -132,8 +138,8 @@ pub const Server = struct {
         }
 
         if (self.getEmptySlot()) |peerId| {
-            logger.debug("{d} peer accepted", .{peerId});
-            self.peers[peerId] = .init(
+            self.peers[peerId] = try Peer.initAlloc(
+                self.allocator,
                 @intCast(peerId),
                 stream,
                 .{
@@ -148,30 +154,44 @@ pub const Server = struct {
                 },
             );
 
-            const peer = &self.peers[peerId];
-            peer.accept(io, &self.group) catch |err| {
-                switch (err) {
-                    error.InvalidInitCode => {
-                        logger.err("peer cannot init with invalid code", .{});
-                    },
-                    else => {
-                        logger.err("failed to accept peer: {s}", .{@errorName(err)});
-                    },
-                }
-                stream.socket.close(io);
-            };
+            logger.debug("{d} peer accepted", .{peerId});
+
+            if (self.peers[peerId]) |peer| {
+                peer.accept(io, &self.group) catch |err| {
+                    switch (err) {
+                        error.InvalidInitCode => {
+                            logger.err("peer cannot init with invalid code", .{});
+                        },
+                        else => {
+                            logger.err("failed to accept peer: {s}", .{@errorName(err)});
+                        },
+                    }
+                    stream.socket.close(io);
+                };
+            }
         } else {
             logger.debug("server is full", .{});
             stream.close(io);
         }
     }
 
+    fn clearSlot(self: *Server, peerId: usize) void {
+        if (self.peers[peerId]) |*peer| {
+            self.peers[peerId] = null;
+            self.allocator.destroy(peer);
+        }
+    }
+
     fn getEmptySlot(self: *Server) ?usize {
-        for (1..self.peers.len) |id| {
-            // empty or disconnected
-            if (@intFromEnum(self.peers[id].state) & 0b10 == 0) {
-                return id;
+        for (1..self.peers.len) |slot| {
+            if (self.peers[slot]) |peer| {
+                // empty or disconnected
+                if (@intFromEnum(peer.state) & 0b10 == 0) {
+                    return slot;
+                }
+                continue;
             }
+            return slot;
         }
         return null;
     }
@@ -185,14 +205,27 @@ fn formatIpAddress(io: std.Io, address: net.IpAddress, buffer: []u8) ?[]u8 {
     return writer.buffered();
 }
 
-fn onChangePeerState(_: *anyopaque, io: std.Io, peer: *Peer, state: Peer.State) void {
+fn onChangePeerState(server: *anyopaque, io: std.Io, peer: *Peer, state: Peer.State) void {
+    const self: *Server = @ptrCast(@alignCast(server));
     logger.info("user({d}): handle event {s}", .{ peer.peerID, @tagName(state) });
     switch (state) {
         .Disconnected => {
+            if (self.callbacks.onReceivePacket) |callback| {
+                if (peer.state == .Connected) {
+                    _ = callback.func(callback.userdata, peer, null);
+                }
+            }
             peer.stream.close(io);
+            self.clearSlot(peer.peerID);
         },
         .Invalid => {
+            if (self.callbacks.onReceivePacket) |callback| {
+                if (peer.state == .Connected) {
+                    _ = callback.func(callback.userdata, peer, null);
+                }
+            }
             peer.stream.close(io);
+            self.clearSlot(peer.peerID);
         },
         else => {
             logger.info("no handled", .{});
@@ -200,7 +233,7 @@ fn onChangePeerState(_: *anyopaque, io: std.Io, peer: *Peer, state: Peer.State) 
     }
 }
 
-fn onReceivePacket(op: *anyopaque, peer: *Peer, packet: *PacketInput) bool {
+fn onReceivePacket(op: *anyopaque, peer: *Peer, packet: ?*PacketInput) bool {
     const self: *Server = @ptrCast(@alignCast(op));
 
     if (self.callbacks.onReceivePacket) |callback| {

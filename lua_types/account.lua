@@ -1,33 +1,32 @@
 ---@meta
 
----Define os possíveis estados de uma conta de usuário.
+---Defines the possible states of a user account.
 ---@enum AccountState
 AccountState = {
-    NEW_ACCCOUNT = 0,
+    NEW_ACCOUNT = 0,
     OFFLINE = 1,
     LOGGED = 2,
     BANNED = 3,
 }
 
----Conta de usuário (mapeada do `Account` Zig).
----Os campos numéricos são mapeados com os nomes originais (sem snake_case).
+---User account (mapped from the Zig `Account` struct).
+---Numeric fields are mapped with their original names (no snake_case conversion).
 ---@class Account
----@field account_id  integer ID único da conta
----@field name       string  Nome do usuário (até 16 chars)
----@field password   string  Senha hash (até 16 chars)
----@field pin_password string PIN numérico (6 bytes)
----@field server     integer Servidor de origem
----@field gold       integer Ouro disponível
----@field char_info   integer Informações de personagem (flags)
----@field char_selected integer Índice do personagem selecionado
----@field state        AccountState
+---@field account_id    integer Unique account ID
+---@field name          string  Username (up to 16 chars)
+---@field password      string  Hashed password (up to 16 chars)
+---@field pin_password  string  Numeric PIN (6 bytes)
+---@field server        integer Origin server
+---@field gold          integer Available gold
+---@field char_info     integer Character information (flags)
+---@field char_selected integer Index of the selected character
+---@field state         AccountState
 local Account = {}
 
-
----Retorna a conta atualmente associada ao cliente.
+---Saves the account to the database.
 ---@param db Database
 function Account:save(db) end
 
----Retorna a conta atualmente associada ao cliente.
+---Returns the character currently associated with the account.
 ---@return Character?
 function Account:get_current_char() end

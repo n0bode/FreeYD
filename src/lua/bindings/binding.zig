@@ -10,7 +10,7 @@ pub const PeerBinding = @import("peer_binding.zig").PeerBinding;
 pub const DatabaseBinding = @import("database_binding.zig").DatabaseBinding;
 
 pub const AccountBinding = @import("account_binding.zig").AccountBinding;
-pub const CharacterBinding = Mapper(domain.Character);
+pub const CharacterBinding = @import("character_binding.zig").CharacterBinding;
 pub const ItemBinding = Mapper(domain.Item);
 
 const testing = @import("std").testing;

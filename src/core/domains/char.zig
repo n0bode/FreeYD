@@ -2,35 +2,44 @@ const Item = @import("item.zig").Item;
 const std = @import("std");
 
 pub const Class = enum(u8) {
-    Tk = 0,
+    TK = 0,
     FM = 1,
     BM = 2,
     HT = 3,
 };
 
+pub const Soul = enum(u8) {
+    MORTAL = 0,
+    GOD = 1,
+    CELESTIAL = 2,
+    SUBCELESTIAL = 3,
+};
+
 pub const Character = extern struct {
-    accountId: u16,
-    slotId: u16,
+    accountId: u64 = 0,
+    slotId: u8 = 0,
 
     name: [16]u8,
-    clan: u8,
+    clan: u8 = 0,
+    soul: Soul = .MORTAL,
 
     info: packed struct(u8) {
-        merchant: u6,
-        city: u2,
+        merchant: u6 = 0,
+        // armia
+        city: u2 = 1,
     },
 
-    guildId: u16,
+    guildId: u16 = 0,
     class: Class,
-    guildRole: u8,
-    rsv: u16,
-    quest: u8,
+    guildRole: u8 = 0,
+    rsv: u16 = 0,
+    quest: u8 = 0,
 
-    gold: i32,
-    exp: u32,
+    gold: i32 = 0,
+    exp: u32 = 0,
 
-    positionX: i16,
-    positionY: i16,
+    positionX: i16 = 0,
+    positionY: i16 = 0,
 
     stats: Stats,
     currentStats: Stats,
@@ -62,74 +71,35 @@ pub const Character = extern struct {
         element: u8,
         lighting: u8,
     },
-    pub fn fromClass(class: Class) Character {
-        var defaults = switch (class) {
-            .BM => std.mem.zeroInit(Character, .{
-                .clan = 0xF8,
-                .class = Class.BM,
-                .gold = 20000,
-                .guildRole = 0x1E,
-                .positionX = 2096,
-                .positionY = 2096,
-                .stats = .{
-                    .level = 0,
-                    .defense = 4,
-                    .attack = 5,
-                    .maxHp = 55,
-                    .maxMp = 70,
-                    .currentHp = 55,
-                    .currentMp = 6,
-                    .str = 6,
-                    .int = 9,
-                    .dex = 5,
-                    .con = 0,
-                },
-                .currentStats = .{
-                    .specials = [4]u8{ 21, 0, 43, 0 },
-                },
-            }),
-            .FM => std.mem.zeroInit(Character, .{
-                .class = Class.FM,
-                .gold = 20000,
-                .positionX = 2096,
-                .positionY = 2096,
-                .stats = .{
-                    .level = 0,
-                    .defense = 4,
-                    .attack = 5,
-                    .maxHp = 55,
-                    .maxMp = 60,
-                    .currentHp = 65,
-                    .currentMp = 5,
-                    .str = 8,
-                    .int = 5,
-                    .dex = 5,
-                    .con = 0,
-                },
-                .currentStats = .{
-                    .specials = [4]u8{ 11, 0, 43, 0 },
-                },
-            }),
-            else => std.mem.zeroInit(Character, .{}),
-        };
+
+    pub fn empty(class: Class) Character {
+        var self = std.mem.zeroInit(Character, .{
+            .class = class,
+            // born in train field
+            .positionX = 2096,
+            .positionY = 2096,
+        });
 
         // in 7.54 FaceID, 1 = TK, 11 = FM, BM = 21, HT = 31
-        defaults.equipments[0].itemID = 1 + @as(u16, @intCast(@intFromEnum(class))) * 10;
-        defaults.equipments[5].itemID = 1430;
-        return defaults;
+        self.equipments[0].itemID = 1 + @as(u16, @intCast(@intFromEnum(class))) * 10;
+        return self;
     }
 };
 
 pub const Stats = extern struct {
-    level: u16 = 10,
-    defense: i16 = 3,
-    attack: i16 = 2,
+    level: u16 = 1,
+    defense: i16 = 10,
+    attack: i16 = 50,
 
     state: packed struct(u16) {
-        merchant: u4,
-        direction: u4,
-        speed: u4,
-        pkRate: u4,
+        // question: what is it?
+        merchant: u4 = 0,
+        // question: what is it?
+        direction: u4 = 0,
+        // movement speed of character
+        movementSpeed: u4 = 0,
+        // level of PK
+        pkLevel: u4 = 0,
     },
 
     maxHp: u16 = 100,
@@ -137,10 +107,19 @@ pub const Stats = extern struct {
     currentHp: u16 = 100,
     currentMp: u16 = 100,
 
-    str: i16 = 5,
-    int: i16 = 5,
-    dex: i16 = 5,
-    con: i16 = 5,
+    str: i16 = 0,
+    int: i16 = 0,
+    dex: i16 = 0,
+    con: i16 = 0,
 
-    specials: [4]u8 = [_]u8{0} ** 4,
+    specials: packed struct(u32) {
+        // weapon
+        skill0: u8 = 0,
+        // class: BM (elemental)
+        skill1: u8 = 0,
+        // class: BM (evocation)
+        skill2: u8 = 0,
+        // class: BM (nature)
+        skill3: u8 = 0,
+    },
 };

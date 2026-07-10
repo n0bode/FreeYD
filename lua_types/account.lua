@@ -30,3 +30,13 @@ function Account:save(db) end
 ---Returns the character currently associated with the account.
 ---@return Character?
 function Account:get_current_char() end
+
+---Create a new character for the account.
+---@param name string
+---@param class CharaterClass
+---@param slotId CharaterClass 0-3
+---@param type CharacterSoul
+---@param builder fun(char: Character) optional function to customize the character after creation
+---@return Character?
+---@return string? error_message
+function Account:create_character(name, slotId, class, type, builder) end

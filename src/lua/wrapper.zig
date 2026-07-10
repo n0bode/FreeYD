@@ -447,9 +447,15 @@ pub const State = struct {
         c.lua_setfield(self.L, c.LUA_GLOBALSINDEX, name.ptr);
     }
 
-    pub fn throw(self: State, message: []const u8) i32 {
+    pub fn panic(self: State, message: []const u8) i32 {
         self.pushString(message);
         return c.lua_error(self.L);
+    }
+
+    pub fn throw(self: State, message: []const u8) i32 {
+        self.pushNil();
+        self.pushString(message);
+        return 2;
     }
 
     pub fn setFuncs(self: State, funcs: []const Reg) void {

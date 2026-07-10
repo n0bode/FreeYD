@@ -15,8 +15,9 @@ server:on("on_pinpassword", function(peer, req)
     end
 
     local password = req.numeric
-    if account.state == AccountState.NEW_ACCOUNT then
+    if account.pin_password == "" then
         account.pin_password = password
+        logger:info("set pin password " .. account.pin_password .. " for account: " .. account.name)
         peer:send_text("new password created")
     else
         if account.pin_password ~= password then

@@ -1,8 +1,58 @@
 ---@meta
 
+---@enum CharacterSoul
+CharacterSoul = {
+    MORTAL = 0,
+    GOD = 1,
+    CELESTIAL = 2,
+    SUBCELESTIAL = 3,
+}
+
+---@enum CharaterClass
+CharaterClass = {
+    TK = 0,
+    FM = 1,
+    BM = 2,
+    HT = 3,
+}
+
+---@class SkillAttributes
+---@field skill0 integer
+---@field skill1 integer
+---@field skill2 integer
+---@field skill3 integer
+local SkillAttributes = {}
+
+---@class CharacterStatsState
+---@field merchant integer
+---@field direction integer
+---@field movementSpeed integer
+---@field pkLevel integer
+
+---@class CharacterStats
+---@field level integer character level
+---@field defense integer character defense
+---@field attack integer character attack
+---@field max_hp integer maximum hit points
+---@field max_mp integer maximum mana points
+---@field hp integer current hit points
+---@field mp integer current mana points
+---@field str integer points of strength
+---@field dex integer points of dexterity
+---@field int integer points of intelligence
+---@field con integer points of constitution
+---@field skills SkillAttributes array of skill IDs (up to 16 skills)
+local CharacterStats = {}
+
 ---User character (mapped from the Zig `Character` struct).
 ---Numeric fields are mapped with their original names (no snake_case conversion).
 ---@class Character
 ---@field name string  Character name (up to 16 chars)
 ---@field gold integer Available gold
+---@field accountId integer ID of the account that owns this character
+---@field indexOf integer Index of the character in the account's character list (0-3)
+---@field class CharaterClass Character class
+---@field type CharacterType Character god class
+---@field stats CharacterStats Character stats
+---@field currentStats CharacterStats Current stats (after buffs/debuffs)
 local Character = {}

@@ -8,6 +8,7 @@ const Database = dblib.Database;
 
 const domain = @import("core").domain;
 pub const network = @import("network");
+const responses = network.responses;
 const Opcode = network.Opcode;
 
 const cwd = std.Io.Dir.cwd();
@@ -79,7 +80,6 @@ pub const Logic = struct {
                     const size = try file.dir.realPathFile(io, file.basename, buffer[0..]);
                     const path = buffer[0..size];
 
-                    std.log.debug("Load file lua: {s}", .{path});
                     try self.L.doFile(path);
                 }
             }
@@ -152,16 +152,22 @@ pub const Logic = struct {
 
         switch (message.?.data) {
             .login => {
-                if (!self.callEvent("on_login", peer, message)) {
-                    return false;
-                }
-                self.respondLogin(peer);
+                return self.respondLogin(
+                    peer,
+                    self.callEvent("on_login", peer, message),
+                );
             },
             .pinPassword => {
-                if (!self.callEvent("on_pinpassword", peer, message)) {
-                    return self.respondPin(peer);
-                }
-                return true;
+                return self.respondPin(
+                    peer,
+                    self.callEvent("on_pinpassword", peer, message),
+                );
+            },
+            .charCreate => {
+                return self.respondCharCreate(
+                    peer,
+                    self.callEvent("on_create_char", peer, message),
+                );
             },
             else => {},
         }
@@ -185,21 +191,50 @@ pub const Logic = struct {
     }
 
     // comands
-    fn respondLogin(_: *Logic, peer: *network.Peer) void {
-        const Respond = network.responses.PacketCharListOutput;
+    fn respondLogin(_: *Logic, peer: *network.Peer, result: bool) bool {
+        if (result) {
+            const Respond = network.responses.PacketCharListOutput;
 
-        var packet: Respond = .from(&peer.account, .enterAccount);
-
-        peer.sendPacket(&packet, true) catch |err| {
-            logger.err("failed to send login response: {s}", .{@errorName(err)});
-        };
-        peer.changeState(.Connected);
+            var packet: Respond = .from(&peer.account, .enterAccount);
+            peer.sendPacket(&packet, true) catch |err| {
+                logger.err("failed to send login response: {s}", .{@errorName(err)});
+            };
+            peer.changeState(.Connected);
+            // keep-connection
+            return true;
+        }
+        // close-connection
+        return false;
     }
 
-    fn respondPin(_: *Logic, peer: *network.Peer) bool {
-        peer.sendCode(@intFromEnum(Opcode.PIN_FAIL)) catch {
-            return false;
-        };
+    fn respondPin(_: *Logic, peer: *network.Peer, result: bool) bool {
+        if (!result) {
+            peer.sendCode(@intFromEnum(Opcode.PIN_FAIL)) catch {
+                // close-connection: fail to send code
+                return false;
+            };
+        }
+        return true;
+    }
+
+    fn respondCharCreate(_: *Logic, peer: *network.Peer, result: bool) bool {
+        if (!result) {
+            peer.sendCode(@intFromEnum(Opcode.CHAR_CREATE_FAIL)) catch {
+                return false;
+            };
+        } else {
+            var pack = responses.PacketCharCreateOutput{
+                .header = .{
+                    .operationCode = @intFromEnum(Opcode.CHAR_CREATED),
+                    .time = std.time.epoch.unix,
+                },
+                .characters = .from(&peer.account),
+            };
+
+            peer.sendPacket(&pack, true) catch {
+                return false;
+            };
+        }
         return true;
     }
 };

@@ -178,13 +178,13 @@ test "create - array" {
 
         fn expect(LL: *State) i32 {
             if (LL.getLuaType(1) != LL.getLuaType(2) and LL.getLuaType(1) != .Userdata) {
-                _ = LL.throw("not equal");
+                _ = LL.panic("not equal");
                 return 0;
             }
             switch (LL.getLuaType(1)) {
                 .Bool => {
                     std.testing.expectEqual(LL.toBoolean(2), LL.toBoolean(1)) catch |err| {
-                        _ = LL.throw(@errorName(err));
+                        _ = LL.panic(@errorName(err));
                         std.debug.print("nao sao igauis", .{});
                         return 0;
                     };
@@ -192,20 +192,20 @@ test "create - array" {
                 .String => {
                     std.testing.expectEqualStrings(LL.toString(2), LL.toString(1)) catch {
                         std.debug.print("nao sao igauis", .{});
-                        _ = LL.throw("not equal");
+                        _ = LL.panic("not equal");
                         return 0;
                     };
                 },
                 .Number => {
                     std.testing.expectApproxEqAbs(LL.toNumber(2), LL.toNumber(1), 1e-4) catch {
                         std.debug.print("expected({any}, {any})\n", .{ LL.toNumber(1), LL.toNumber(2) });
-                        _ = LL.throw("not equal");
+                        _ = LL.panic("not equal");
                         return 0;
                     };
                 },
                 else => {
                     std.debug.print("not mapped\n", .{});
-                    _ = LL.throw("f");
+                    _ = LL.panic("f");
                 },
             }
             return 0;

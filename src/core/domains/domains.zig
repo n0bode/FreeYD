@@ -5,3 +5,4 @@ pub const Account = @import("account.zig").Account;
 pub const AccountState = @import("account.zig").AccountState;
 pub const CharacterClass = @import("char.zig").Class;
 pub const CharacterStats = @import("char.zig").Stats;
+pub const CharacterSoul = @import("char.zig").Soul;

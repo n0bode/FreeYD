@@ -63,7 +63,7 @@ fn lua__index(L: *lua.State) i32 {
         if (field.type == void) continue;
         const enumCurrent = @field(packets.PacketData, field.name);
         if (enumCurrent == self.data) {
-            const data = @field(self.data, field.name);
+            const data = &@field(self.data, field.name);
             if (Indexer(field.type).pushValue(data, keyName, L)) {
                 return 1;
             } else {

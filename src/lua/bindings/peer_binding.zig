@@ -105,7 +105,7 @@ fn lua__index(L: *State) i32 {
         return 1;
     }).*;
 
-    if (!Indexer(Peer).pushValue(peer.*, keyName, L)) {
+    if (!Indexer(Peer).pushValue(peer, keyName, L)) {
         L.pushNil();
     }
     return 1;

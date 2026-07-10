@@ -87,8 +87,10 @@ pub const Logic = struct {
     }
 
     pub fn bindEvent(self: *Logic, name: []const u8, fnRegIdx: i32) !void {
+        const allocator = self.arena.allocator();
         if (!self.events.contains(name)) {
-            try self.events.put(name, try ListFNReg.initCapacity(self.arena.allocator(), 10));
+            const owned_name = try allocator.dupe(u8, name);
+            try self.events.put(owned_name, try ListFNReg.initCapacity(self.arena.allocator(), 10));
         }
 
         if (self.events.getPtr(name)) |events| {
@@ -108,19 +110,30 @@ pub const Logic = struct {
             for (events.items) |regId| {
                 L.restoreRegistry(regId);
 
-                bindings.PeerBinding.newUserdata(L, peer);
-                bindings.PacketBinder.newUserdata(L, packet);
+                if (L.isNil(-1)) {
+                    std.log.err("script error: function is nil", .{});
+                    L.pop(1);
+                    return false;
+                }
 
-                const p = L.getTop();
+                bindings.PeerBinding.newUserdata(L, peer);
+                if (packet) |pack| {
+                    bindings.PacketBinder.newUserdata(L, pack);
+                } else {
+                    L.pushNil();
+                }
+
                 if (!L.pcall(2, 1)) {
                     const err = L.toString(-1);
                     std.log.err("script error: {s}", .{err});
+                    L.pop(1);
+                    return false;
                 }
 
-                logger.info("getTop: {d} {d}", .{ p, L.getTop() });
-                L.checkType(-1, .Bool);
-                logger.info("boolen: {any}", .{L.toBoolean(-1)});
-                return L.toBoolean(-1);
+                const result = !L.isNil(-1) and L.toBoolean(-1);
+                L.pop(1);
+
+                if (!result) return false;
             }
         }
         return true;
@@ -143,6 +156,12 @@ pub const Logic = struct {
                     return false;
                 }
                 self.respondLogin(peer);
+            },
+            .pinPassword => {
+                if (!self.callEvent("on_pinpassword", peer, message)) {
+                    return self.respondPin(peer);
+                }
+                return true;
             },
             else => {},
         }
@@ -175,5 +194,12 @@ pub const Logic = struct {
             logger.err("failed to send login response: {s}", .{@errorName(err)});
         };
         peer.changeState(.Connected);
+    }
+
+    fn respondPin(_: *Logic, peer: *network.Peer) bool {
+        peer.sendCode(@intFromEnum(Opcode.PIN_FAIL)) catch {
+            return false;
+        };
+        return true;
     }
 };

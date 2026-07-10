@@ -41,7 +41,49 @@ pub fn bind(L: *State) void {
                 },
             },
         },
+        .{
+            .name = "create_account",
+            .value = .{
+                .func = .{
+                    .func = lua_create_account,
+                },
+            },
+        },
+        .{
+            .name = "get_account_by_username",
+            .value = .{
+                .func = .{
+                    .func = lua__get_account_by_username,
+                },
+            },
+        },
     });
+}
+
+fn lua_create_account(L: *State) i32 {
+    const self = (toUserdata(L, 1) orelse {
+        L.pushNil();
+        return 1;
+    });
+
+    L.checkType(2, .Table);
+
+    L.getField(2, "username");
+    const login = L.toString(-1);
+
+    L.getField(2, "password");
+    const password = L.toString(-1);
+
+    var account: Account = undefined;
+    if (!self.db.signup(self.io, login, password, &account)) {
+        L.pushNil();
+        return 1;
+    }
+
+    const ptr: *Account = L.newUserdata(Account);
+    ptr.* = account;
+    AccountBinding.newUserdata(L, ptr);
+    return 1;
 }
 
 fn lua_get_account_by_credentials(L: *State) i32 {
@@ -63,6 +105,28 @@ fn lua_get_account_by_credentials(L: *State) i32 {
     }
 
     // WARN: create struct account in HEAP memory
+    const ptr: *Account = L.newUserdata(Account);
+    ptr.* = account;
+    AccountBinding.newUserdata(L, ptr);
+
+    return 1;
+}
+
+fn lua__get_account_by_username(L: *State) i32 {
+    const self = (toUserdata(L, 1) orelse {
+        L.pushNil();
+        return 1;
+    });
+
+    L.checkType(2, .String);
+    const username = L.toString(2);
+
+    var account: Account = undefined;
+    if (!self.db.getAccountByUsername(self.io, username, &account)) {
+        L.pushNil();
+        return 1;
+    }
+
     const ptr: *Account = L.newUserdata(Account);
     ptr.* = account;
     AccountBinding.newUserdata(L, ptr);

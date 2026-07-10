@@ -20,6 +20,7 @@ pub const VTable = struct {
     login: *const fn (*anyopaque, io: Io, username: []const u8, password: []const u8, account: *Account) bool,
     signup: *const fn (*anyopaque, io: Io, username: []const u8, password: []const u8, account: *Account) bool,
     updateAccount: *const fn (*anyopaque, io: Io, account: *Account) bool,
+    getAccountByUsername: *const fn (*anyopaque, io: Io, username: []const u8, account: *Account) bool,
 };
 
 // wrapper function
@@ -51,6 +52,15 @@ pub fn updateAccount(
     return self.vtable.updateAccount(self.ptr, io, account);
 }
 
+pub fn getAccountByUsername(
+    self: Database,
+    io: Io,
+    username: []const u8,
+    account: *Account,
+) bool {
+    return self.vtable.getAccountByUsername(self.ptr, io, username, account);
+}
+
 pub fn from(impl: anytype) Database {
     const T = @TypeOf(impl);
     const gen = struct {
@@ -66,6 +76,10 @@ pub fn from(impl: anytype) Database {
             const self = @as(T, @ptrCast(@alignCast(ptr)));
             return self.updateAccount(io, account);
         }
+        fn getAccountByUsername(ptr: *anyopaque, io: Io, username: []const u8, account: *Account) bool {
+            const self = @as(T, @ptrCast(@alignCast(ptr)));
+            return self.getAccountByUsername(io, username, account);
+        }
     };
     return .{
         .ptr = impl,
@@ -73,6 +87,7 @@ pub fn from(impl: anytype) Database {
             .login = gen.login,
             .signup = gen.signup,
             .updateAccount = gen.updateAccount,
+            .getAccountByUsername = gen.getAccountByUsername,
         },
     };
 }

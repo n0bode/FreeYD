@@ -61,8 +61,8 @@ pub const FileDB = struct {
         account: *Account,
     ) bool {
         account.* = std.mem.zeroInit(Account, .{
-            .accountID = self.rand.next(),
-            .state = .unset,
+            .accountID = self.rand.random().intRangeAtMost(u64, 1, 2500),
+            .state = .NEW_ACCOUNT,
         });
 
         @memcpy(account.name[0..username.len], username);
@@ -77,6 +77,33 @@ pub const FileDB = struct {
         account: *Account,
     ) bool {
         return self.persistAccount(io, account, false);
+    }
+
+    pub fn getAccountByUsername(
+        self: *FileDB,
+        io: std.Io,
+        username: []const u8,
+        account: *Account,
+    ) bool {
+        var buffer: [1024]u8 = undefined;
+        const path = std.fmt.bufPrint(buffer[0..], "{s}/{s}.db", .{ self.path, username }) catch {
+            return false;
+        };
+
+        const file = cwd.openFile(io, path, .{ .mode = .read_only }) catch {
+            return false;
+        };
+        defer file.close(io);
+
+        var bAccount = std.mem.asBytes(account);
+        var readerA = file.reader(io, bAccount[0..]);
+        const reader = &readerA.interface;
+
+        _ = reader.take(@sizeOf(Account)) catch {
+            return false;
+        };
+
+        return true;
     }
 
     pub fn interface(self: *FileDB) Database {

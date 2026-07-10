@@ -9,7 +9,7 @@ pub const PacketBinder = @import("packet_binding.zig").PacketInputBinding;
 pub const PeerBinding = @import("peer_binding.zig").PeerBinding;
 pub const DatabaseBinding = @import("database_binding.zig").DatabaseBinding;
 
-pub const AccountBinding = Mapper(domain.Account);
+pub const AccountBinding = @import("account_binding.zig").AccountBinding;
 pub const CharacterBinding = Mapper(domain.Character);
 pub const ItemBinding = Mapper(domain.Item);
 

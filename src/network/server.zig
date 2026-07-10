@@ -6,7 +6,7 @@ const Address = net.IpAddress;
 const Allocator = std.mem.Allocator;
 const Peer = @import("peer.zig").Peer;
 const Database = @import("db").Database;
-const logger = std.log;
+const logger = std.log.scoped(.server);
 
 const PacketInput = @import("packet/packet.zig").PacketInput;
 

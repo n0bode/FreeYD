@@ -21,7 +21,7 @@ const IDatabase = @import("db").Database;
 
 const Stream = net.Stream;
 
-const logger = std.log;
+const logger = std.log.scoped(.peer);
 
 const INIT_CODE = 0x1F11F311;
 

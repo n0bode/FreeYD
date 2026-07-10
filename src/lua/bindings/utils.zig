@@ -1,4 +1,6 @@
 const State = @import("binding.zig").lua.State;
+const Reg = @import("binding.zig").lua.Reg;
+
 const std = @import("std");
 const ascii = std.ascii;
 
@@ -48,9 +50,13 @@ test "fromSnakeCase" {
 pub fn toSnakeCase(comptime name: []const u8) []const u8 {
     const count = comptime blk: {
         var acc = 0;
+        var last = false;
         for (name, 0..) |c, i| {
-            if (ascii.isUpper(c) and i > 0) {
+            if (ascii.isUpper(c) and i > 0 and !last) {
+                last = true;
                 acc += 1;
+            } else {
+                last = ascii.isUpper(c);
             }
         }
         break :blk acc;
@@ -59,12 +65,15 @@ pub fn toSnakeCase(comptime name: []const u8) []const u8 {
     const result: [count + name.len]u8 = comptime blk: {
         var buffer: [count + name.len]u8 = undefined;
         var i: usize = 0;
+        var last: bool = false;
         for (name) |c| {
-            if (ascii.isUpper(c) and i > 0) {
+            if (ascii.isUpper(c) and i > 0 and !last) {
                 buffer[i] = '_';
+                last = true;
                 buffer[i + 1] = ascii.toLower(c);
                 i = i + 1;
             } else {
+                last = ascii.isUpper(c);
                 buffer[i] = ascii.toLower(c);
             }
             i = i + 1;
@@ -78,6 +87,7 @@ test "toSnakeCase" {
     const expect = testing.expectEqualStrings;
     try expect("hello_world", toSnakeCase("HelloWorld"));
     try expect("hello", toSnakeCase("Hello"));
+    try expect("peer_id", toSnakeCase("peerID"));
     try expect("hello_world_test", toSnakeCase("HelloWorldTest"));
     try expect("hello_world_test_case", toSnakeCase("HelloWorldTestCase"));
 }
@@ -92,6 +102,11 @@ pub fn walkGeneratorMTS(comptime T: anytype, L: *State) void {
     }
 }
 
+pub fn bindFunctions(L: *State, metatableName: []const u8, fns: []const Reg) void {
+    L.getMetatableByName(metatableName);
+    L.setFuncs(fns);
+}
+
 pub fn LuaMapperStruct(comptime T: anytype) type {
     return struct {
         pub const metatableName = "mt_" ++ @typeName(T);
@@ -99,6 +114,9 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
             _ = L.newMetatable(metatableName);
             L.pushFunction(lua__index);
             L.setField(-2, "__index");
+            L.pushFunction(lua__newindex);
+            L.setField(-2, "__newindex");
+            L.pop(1);
         }
 
         pub fn getMetatable(L: *State) void {
@@ -116,12 +134,72 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
             return (L.toUserdata(*T, index) orelse return null).*;
         }
 
+        fn lua__newindex(L: *State) i32 {
+            const self = toUserdata(L, 1) orelse {
+                L.pushNil();
+                return 1;
+            };
+
+            const keyname = L.checkString(2);
+            inline for (std.meta.fields(T)) |field| {
+                const snakeName = toSnakeCase(field.name);
+                if (std.mem.eql(u8, snakeName, keyname)) {
+                    switch (@typeInfo(field.type)) {
+                        .int => {
+                            const value = L.checkInteger(3);
+                            @field(self, field.name) = @intCast(value);
+                        },
+                        .float => {
+                            const value = L.checkNumber(3);
+                            @field(self, field.name) = @floatCast(value);
+                        },
+                        .bool => {
+                            const value = L.checkBool(3);
+                            @field(self, field.name) = value;
+                        },
+                        .@"enum" => |u| {
+                            switch (@typeInfo(u.tag_type)) {
+                                .int => {
+                                    const value = L.checkInteger(3);
+                                    @field(self, field.name) = @enumFromInt(value);
+                                },
+                                else => {
+                                    _ = L.throw("unsupported enum type for field: " ++ field.name);
+                                },
+                            }
+                        },
+                        .array => |t| {
+                            if (t.child == u8) {
+                                const value = L.toString(3);
+                                // @field made a copy, need pointer here to modify the original array
+                                var ptr = &@field(self, field.name);
+
+                                const min = @min(ptr.len, value.len);
+                                const text = value[0..min];
+
+                                @memcpy(ptr[0..min], text);
+                                std.debug.print("tipo (3): {any} = {s} = {s}\n", .{ L.getLuaType(3), @field(self, field.name), ptr[0..min] });
+                            } else {
+                                _ = L.throw("unsupported array type for field: " ++ field.name);
+                            }
+                        },
+                        else => {
+                            _ = L.throw("unsupported type for field: " ++ field.name);
+                        },
+                    }
+                    return 0;
+                }
+            }
+            _ = L.throw("field no found");
+            return 0;
+        }
+
         fn lua__index(L: *State) i32 {
-            const keyName = L.toString(2);
+            const keyname = L.toString(2);
 
             _ = L.getMetatable(1);
-            L.getField(-1, keyName);
-            if (L.isNil(-1)) {
+            L.getField(-1, keyname);
+            if (!L.isNil(-1)) {
                 return 1;
             }
             L.pop(2);
@@ -135,7 +213,7 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
                 const value = @field(self, field.name);
                 const snakeName = toSnakeCase(field.name);
                 if (field.type == void) continue;
-                if (std.mem.eql(u8, keyName, snakeName)) {
+                if (std.mem.eql(u8, keyname, snakeName)) {
                     switch (@typeInfo(field.type)) {
                         // use pointer instead of struct
                         .@"struct" => {
@@ -155,13 +233,15 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
 
 pub fn IndexerField(comptime T: anytype) type {
     return struct {
-        pub fn pushValue(self: T, name: []const u8, L: *State) bool {
+        pub fn pushValue(self: *T, name: []const u8, L: *State) bool {
             inline for (std.meta.fields(T)) |field| {
                 const snakeName = toSnakeCase(field.name);
+
                 if (std.mem.eql(u8, snakeName, name)) {
                     if (@typeInfo(field.type) == .@"struct") {
-                        const ptr: *field.type = @constCast(&@field(self, field.name));
+                        const ptr: *field.type = &@field(self, field.name);
                         L.pushAny(*field.type, ptr);
+                        return true;
                     } else {
                         const value = @field(self, field.name);
                         L.pushAny(field.type, value);

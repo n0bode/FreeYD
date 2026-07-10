@@ -27,7 +27,7 @@ func main() {
 	}()
 
 	for {
-		slog.Debug("esperando conexao")
+		slog.Info("esperando conexao")
 		conn, err := listen.Accept()
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
@@ -37,7 +37,12 @@ func main() {
 			continue
 		}
 
-		content := `100\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n`
+		go func() {
+			<-ctx.Done()
+			conn.Close()
+		}()
+
+		content := `0\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n-1\r\n`
 		now := time.Now().Format("%a, %d %b %Y %H:%M:%S %Z")
 		fmt.Fprintf(conn, "HTTP/1.1 200 OK\r\n")
 		fmt.Fprintf(conn, "Date: %s\r\n", now)

@@ -9,6 +9,7 @@ local Server = {}
 ---@overload fun(self: Server, event: "on_enterworld",  handler: fun(peer: Peer, req: EnterWorldRequest): boolean)
 ---@overload fun(self: Server, event: "on_disconnected", handler: fun(peer: Peer))
 ---@overload fun(self: Server, event: "on_create_char", handler: fun(peer: Peer, req: CreateCharRequest): boolean)
+---@overload fun(self: Server, event: "on_delete_char", handler: fun(peer: Peer, req: DeleteCharRequest): boolean)
 ---@param event string Event name
 ---@param handler fun(peer: Peer, req: any) Callback invoked when the event fires
 function Server:on(event, handler) end

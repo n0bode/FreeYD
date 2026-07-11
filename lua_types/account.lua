@@ -20,6 +20,7 @@ AccountState = {
 ---@field gold          integer Available gold
 ---@field char_info     integer Character information (flags)
 ---@field char_selected integer Index of the selected character
+---@field characters    Character[]
 ---@field state         AccountState
 local Account = {}
 
@@ -40,3 +41,9 @@ function Account:get_current_char() end
 ---@return Character?
 ---@return string? error_message
 function Account:create_character(name, slotId, class, type, builder) end
+
+---Get a character by its index in the account's character list.
+---@param index integer 0-3
+---@return Character?
+---@return string? ?error_message
+function Account:get_character(index) end

@@ -28,9 +28,24 @@ local SkillAttributes = {}
 ---@field direction integer
 ---@field movementSpeed integer
 ---@field pkLevel integer
+local CharacterStatsState = {};
+
+---@enum Cities
+Cities = {
+    ARMIA = 0,
+    CITY1 = 1,
+    CITY2 = 2,
+    CITY3 = 3,
+};
+
+---@class CitizenInfo
+---@field city Cities
+---@field merchant integer
+local CitizenInfo = {};
 
 ---@class CharacterStats
 ---@field level integer character level
+---@field state CharacterStatsState state
 ---@field defense integer character defense
 ---@field attack integer character attack
 ---@field max_hp integer maximum hit points
@@ -49,10 +64,12 @@ local CharacterStats = {}
 ---@class Character
 ---@field name string  Character name (up to 16 chars)
 ---@field gold integer Available gold
----@field accountId integer ID of the account that owns this character
----@field indexOf integer Index of the character in the account's character list (0-3)
+---@field account_id integer ID of the account that owns this character
+---@field skill_points integer amount available points skill
+---@field slot_id integer Index of the character in the account's character list (0-3)
 ---@field class CharaterClass Character class
----@field type CharacterType Character god class
+---@field soul CharacterSoul Character god class
+---@field citizen_info CitizenInfo maximum mana points
 ---@field stats CharacterStats Character stats
 ---@field currentStats CharacterStats Current stats (after buffs/debuffs)
 local Character = {}

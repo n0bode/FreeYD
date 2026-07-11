@@ -140,6 +140,9 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
                 return 1;
             };
 
+            if (L.toUserdata(*anyopaque, 1)) |ptr| {
+                std.debug.print("set op({X}) o({X})\n", .{ @intFromPtr(ptr), @intFromPtr(ptr.*) });
+            }
             const keyname = L.checkString(2);
             inline for (std.meta.fields(T)) |field| {
                 const snakeName = toSnakeCase(field.name);
@@ -164,7 +167,7 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
                                     @field(self, field.name) = @enumFromInt(value);
                                 },
                                 else => {
-                                    _ = L.throw("unsupported enum type for field: " ++ field.name);
+                                    _ = L.panic("unsupported enum type for field: " ++ field.name);
                                 },
                             }
                         },
@@ -173,24 +176,28 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
                                 const value = L.toString(3);
                                 // @field made a copy, need pointer here to modify the original array
                                 var ptr = &@field(self, field.name);
+                                std.debug.print("memset ptr = {X}\n", .{@intFromPtr(ptr[0..].ptr)});
 
                                 const min = @min(ptr.len, value.len);
                                 const text = value[0..min];
 
-                                @memcpy(ptr[0..min], text);
+                                @memset(ptr[0..], 0);
+                                if (min > 0) {
+                                    @memcpy(ptr[0..min], text);
+                                }
                                 std.debug.print("tipo (3): {any} = {s} = {s}\n", .{ L.getLuaType(3), @field(self, field.name), ptr[0..min] });
                             } else {
-                                _ = L.throw("unsupported array type for field: " ++ field.name);
+                                _ = L.panic("unsupported array type for field: " ++ field.name);
                             }
                         },
                         else => {
-                            _ = L.throw("unsupported type for field: " ++ field.name);
+                            _ = L.panic("unsupported type for field: " ++ field.name);
                         },
                     }
                     return 0;
                 }
             }
-            _ = L.throw("field no found");
+            _ = L.panic("field no found");
             return 0;
         }
 
@@ -214,11 +221,20 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
                 const snakeName = toSnakeCase(field.name);
                 if (field.type == void) continue;
                 if (std.mem.eql(u8, keyname, snakeName)) {
+                    std.log.debug("({X}).{s}", .{ @intFromPtr(&@field(self, field.name)), keyname });
                     switch (@typeInfo(field.type)) {
                         // use pointer instead of struct
                         .@"struct" => {
                             const ptr = &@field(self, field.name);
                             L.pushAny(*field.type, ptr);
+                        },
+                        .array => |arr| {
+                            if (arr.child == u8) {
+                                L.pushAny(field.type, value);
+                            } else {
+                                const ptr = &@field(self, field.name);
+                                L.pushAny(*field.type, ptr);
+                            }
                         },
                         else => L.pushAny(field.type, value),
                     }

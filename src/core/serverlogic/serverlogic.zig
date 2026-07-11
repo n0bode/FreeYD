@@ -169,6 +169,12 @@ pub const Logic = struct {
                     self.callEvent("on_create_char", peer, message),
                 );
             },
+            .charDelete => {
+                return self.respondCharDelete(
+                    peer,
+                    self.callEvent("on_delete_char", peer, message),
+                );
+            },
             else => {},
         }
         return true;
@@ -227,6 +233,22 @@ pub const Logic = struct {
                 .header = .{
                     .operationCode = @intFromEnum(Opcode.CHAR_CREATED),
                     .time = std.time.epoch.unix,
+                },
+                .characters = .from(&peer.account),
+            };
+
+            peer.sendPacket(&pack, true) catch {
+                return false;
+            };
+        }
+        return true;
+    }
+
+    fn respondCharDelete(_: *Logic, peer: *network.Peer, result: bool) bool {
+        if (result) {
+            var pack = responses.PacketCharDeleteOutput{
+                .header = .{
+                    .operationCode = @intFromEnum(Opcode.CHAR_DELETED),
                 },
                 .characters = .from(&peer.account),
             };

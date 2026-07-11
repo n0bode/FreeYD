@@ -15,6 +15,25 @@ pub const Soul = enum(u8) {
     SUBCELESTIAL = 3,
 };
 
+pub const ResistStats = packed struct(u32) {
+    ice: u8,
+    fire: u8,
+    element: u8,
+    lighting: u8,
+};
+
+pub const Cities = enum(u2) {
+    ARMIA = 0,
+    CITY1 = 1,
+    CITY2 = 2,
+    CITY3 = 3,
+};
+
+pub const CitizenInfo = packed struct(u8) {
+    merchant: u6 = 0,
+    city: Cities = .ARMIA,
+};
+
 pub const Character = extern struct {
     accountId: u64 = 0,
     slotId: u8 = 0,
@@ -23,11 +42,7 @@ pub const Character = extern struct {
     clan: u8 = 0,
     soul: Soul = .MORTAL,
 
-    info: packed struct(u8) {
-        merchant: u6 = 0,
-        // armia
-        city: u2 = 1,
-    },
+    citizenInfo: CitizenInfo,
 
     guildId: u16 = 0,
     class: Class,
@@ -47,7 +62,7 @@ pub const Character = extern struct {
     equipments: [16]Item,
     carry: [64]Item,
 
-    skills: u16,
+    skillPoints: u16,
     magic: u32,
 
     statsBonus: u16,
@@ -65,12 +80,7 @@ pub const Character = extern struct {
     regenMp: i8,
     attackSpeed: u16,
 
-    resists: packed struct(u32) {
-        ice: u8,
-        fire: u8,
-        element: u8,
-        lighting: u8,
-    },
+    resists: ResistStats,
 
     pub fn empty(class: Class) Character {
         var self = std.mem.zeroInit(Character, .{
@@ -86,40 +96,40 @@ pub const Character = extern struct {
     }
 };
 
+pub const StatsState = packed struct(u16) {
+    // question: what is it?
+    merchant: u4 = 0,
+    // question: what is it?
+    direction: u4 = 0,
+    // movement speed of character
+    movementSpeed: u4 = 0,
+    // level of PK
+    pkLevel: u4 = 0,
+};
+
+pub const SkillAttributes = packed struct(u32) {
+    // weapon
+    skill0: u8 = 0,
+    // class: BM (elemental)
+    skill1: u8 = 0,
+    // class: BM (evocation)
+    skill2: u8 = 0,
+    // class: BM (nature)
+    skill3: u8 = 0,
+};
+
 pub const Stats = extern struct {
     level: u16 = 1,
     defense: i16 = 10,
     attack: i16 = 50,
-
-    state: packed struct(u16) {
-        // question: what is it?
-        merchant: u4 = 0,
-        // question: what is it?
-        direction: u4 = 0,
-        // movement speed of character
-        movementSpeed: u4 = 0,
-        // level of PK
-        pkLevel: u4 = 0,
-    },
-
+    state: StatsState,
     maxHp: u16 = 100,
     maxMp: u16 = 100,
-    currentHp: u16 = 100,
-    currentMp: u16 = 100,
-
+    hp: u16 = 100,
+    mp: u16 = 100,
     str: i16 = 0,
     int: i16 = 0,
     dex: i16 = 0,
     con: i16 = 0,
-
-    specials: packed struct(u32) {
-        // weapon
-        skill0: u8 = 0,
-        // class: BM (elemental)
-        skill1: u8 = 0,
-        // class: BM (evocation)
-        skill2: u8 = 0,
-        // class: BM (nature)
-        skill3: u8 = 0,
-    },
+    skills: SkillAttributes,
 };

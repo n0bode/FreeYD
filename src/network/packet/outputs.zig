@@ -130,13 +130,13 @@ pub const CharStatsData = extern struct {
             .state = @bitCast(s.state),
             .maxHp = s.maxHp,
             .maxMp = s.maxMp,
-            .currentHp = s.currentHp,
-            .currentMp = s.currentMp,
+            .currentHp = s.hp,
+            .currentMp = s.mp,
             .str = s.str,
             .int = s.int,
             .dex = s.dex,
             .con = s.con,
-            .specials = s.specials,
+            .specials = @bitCast(s.skills),
         };
     }
 };
@@ -189,8 +189,7 @@ pub const PacketCharListData = extern struct {
             self.gold[iChar] = dbChar.gold;
             self.exp[iChar] = dbChar.exp;
 
-            self.stats[iChar] = @bitCast(dbChar.stats);
-
+            self.stats[iChar] = .from(dbChar.stats);
             const equipments = &self.equipments[iChar];
             inline for (0..equipments.len) |iEquip| {
                 if (iEquip > (dbChar.equipments.len - 1)) {
@@ -411,6 +410,7 @@ pub const PacketCharCreateOuput = extern struct {
 };
 
 pub const PacketCharDeleteOutput = extern struct {
+    header: Header,
     characters: PacketCharListData,
 };
 

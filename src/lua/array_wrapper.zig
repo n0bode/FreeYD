@@ -118,6 +118,7 @@ fn lua__index(L: *State) i32 {
             }
 
             const ptr = L.newUserdata(*anyopaque);
+            std.debug.print("origem ptr = {X} opaque = {X}\n", .{ @intFromPtr(element.ptr), @intFromPtr(ptr) });
             ptr.* = @ptrCast(element.ptr);
             L.getMetatableByName(raw.mtName);
             _ = L.setMetatable(-2);

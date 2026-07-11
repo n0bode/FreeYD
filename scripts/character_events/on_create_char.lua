@@ -19,6 +19,15 @@ server:on("on_create_char", function(peer, req)
 
     local char, err = account:create_character(req.name, req.slot, req.class, CharacterSoul.MORTAL, function(char)
         -- TODO: ler de uma tabela ou algo do tipo
+        char.citizen_info.city = Cities.CITY2
+        char.skill_points = 255
+        char.stats.state.merchant = 2;
+        char.stats.skills.skill0 = 10;
+        char.stats.skills.skill1 = 91
+        char.stats.skills.skill2 = 92
+        char.stats.skills.skill3 = 93
+        char.stats.str = 100
+        char.stats.int = 100
         logger:info("chamou o builder " .. char.name)
     end)
 

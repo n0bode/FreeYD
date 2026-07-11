@@ -21,6 +21,14 @@
 ---@field name  string  Character name (up to 16 chars)
 ---@field class integer Class: 0=Tk · 1=FM · 2=BM · 3=HT
 
+
+---Request to create a delete character.
+---@class DeleteCharRequest
+---@field slot  integer Chosen slot (0-3)
+---@field name  string  Character name (up to 16 chars)
+---@field password string Password confirmation
+
+
 ---Character selection / enter world packet (`PacketEnterWorldInput`).
 ---@class EnterWorldRequest
 ---@field char_slot integer Selected character slot

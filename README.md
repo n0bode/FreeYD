@@ -1,6 +1,7 @@
-# Estrutura do Projeto WYD 7.54 (Ziglang)
 
-Este documento descreve a estrutura do projeto open-source para o servidor do jogo WYD versão 7.54, desenvolvido em Ziglang.
+# Free Your Destiny (ou Freeyd)
+
+Este é um projeto focado em criação de servidor emulado de With Your Destiny.
 
 ## Visão Geral
 
@@ -30,7 +31,7 @@ O projeto é modularizado para facilitar o desenvolvimento e a manutenção, sep
 *   **Extensibilidade:** Projetado para permitir futuras implementações de drivers para bancos de dados mais robustos (ex: PostgreSQL, SQLite, MySQL) conforme a necessidade do projeto.
 *   **Tecnologia:** Ziglang.
 
-### 4. `brain` (Lógica de Jogo)
+### 4. `serverlogic` (Lógica de Jogo)
 
 *   **Função:** Este é o coração da lógica de jogo, onde as regras e comportamentos específicos do jogo são definidos e executados em resposta a eventos.
 *   **Linguagem de Script:** As lógicas de jogo são escritas em **Lua**. Isso oferece grande flexibilidade e permite que desenvolvedores ou designers de jogo ajustem o comportamento do jogo sem a necessidade de recompilar o servidor principal.

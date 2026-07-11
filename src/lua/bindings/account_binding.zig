@@ -23,21 +23,40 @@ pub fn newUserdata(L: *lua.State, account: *domain.Account) void {
 pub fn bind(L: *lua.State) void {
     AccountMapped.bind(L);
     bindEnums(L);
-    bindFunctions(L, metatableName, &.{ .{
-        .name = "save",
-        .value = .{
-            .func = .{
-                .func = lua__save,
+    bindFunctions(L, metatableName, &.{
+        .{
+            .name = "save",
+            .value = .{
+                .func = .{
+                    .func = lua__save,
+                },
             },
         },
-    }, .{
-        .name = "create_character",
-        .value = .{
-            .func = .{
-                .func = lua__create_character,
+        .{
+            .name = "create_character",
+            .value = .{
+                .func = .{
+                    .func = lua__create_character,
+                },
             },
         },
-    } });
+        .{
+            .name = "get_character",
+            .value = .{
+                .func = .{
+                    .func = lua__get_character,
+                },
+            },
+        },
+        .{
+            .name = "delete_character",
+            .value = .{
+                .func = .{
+                    .func = lua__delete_character,
+                },
+            },
+        },
+    });
 }
 
 fn bindEnums(L: *lua.State) void {
@@ -113,10 +132,41 @@ fn lua__create_character(L: *lua.State) i32 {
         L.pushValue(6);
         L.pushValue(-2);
         if (!L.pcall(1, 0)) {
-            return L.throw("builder function failed");
+            std.log.err("{s}", .{L.toString(-1)});
+            return L.throw("builder: ");
         }
         L.pop(L.getTop() - n);
     }
     L.pushNil();
     return 2;
+}
+
+fn lua__get_character(L: *lua.State) i32 {
+    const self: *domain.Account = toUserdata(L, 1) orelse {
+        return L.throw("function must be called with an account instance");
+    };
+
+    const slotId = L.checkInteger(2);
+    if (slotId < 0 or slotId >= 4) {
+        return L.throw("slotId must be between 0 and 3");
+    }
+
+    const char: *domain.Character = &self.characters[@intCast(slotId)];
+    CharacterBinding.newUserdata(L, char);
+    L.pushNil();
+    return 2;
+}
+
+fn lua__delete_character(L: *lua.State) i32 {
+    const self: *domain.Account = toUserdata(L, 1) orelse {
+        return L.throw("function must be called with an account instance");
+    };
+
+    const slotId = L.checkInteger(2);
+    if (slotId < 0 or slotId >= 4) {
+        return L.throw("slotId must be between 0 and 3");
+    }
+
+    self.characters[@intCast(slotId)] = std.mem.zeroes(domain.Character);
+    return 0;
 }

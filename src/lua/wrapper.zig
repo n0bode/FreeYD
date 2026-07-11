@@ -428,6 +428,14 @@ pub const State = struct {
                             self.pushNil();
                         }
                     },
+                    // *[N]T: pass the slice pointing to the actual array in memory
+                    .array => |arr| {
+                        if (arr.child == u8) {
+                            self.pushString(std.mem.sliceTo(data[0..], 0));
+                        } else {
+                            ArrayWrapper.pushArray(arr.child, data[0..], self);
+                        }
+                    },
                     else => {
                         // recursive
                         self.pushAny(pT.child, data.*);

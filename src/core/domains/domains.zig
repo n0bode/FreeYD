@@ -11,3 +11,4 @@ pub const StatsState = @import("char.zig").StatsState;
 pub const ResitsStats = @import("char.zig").ResistStats;
 pub const CitizenInfo = @import("char.zig").CitizenInfo;
 pub const Cities = @import("char.zig").Cities;
+pub const Position = @import("char.zig").Position;

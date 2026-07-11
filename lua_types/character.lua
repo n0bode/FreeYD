@@ -26,7 +26,7 @@ local SkillAttributes = {}
 ---@class CharacterStatsState
 ---@field merchant integer
 ---@field direction integer
----@field movementSpeed integer
+---@field movement_speed integer
 ---@field pkLevel integer
 local CharacterStatsState = {};
 
@@ -59,6 +59,10 @@ local CitizenInfo = {};
 ---@field skills SkillAttributes array of skill IDs (up to 16 skills)
 local CharacterStats = {}
 
+---@class Position
+---@field x integer X coordinate
+---@field y integer Y coordinate
+
 ---User character (mapped from the Zig `Character` struct).
 ---Numeric fields are mapped with their original names (no snake_case conversion).
 ---@class Character
@@ -71,5 +75,6 @@ local CharacterStats = {}
 ---@field soul CharacterSoul Character god class
 ---@field citizen_info CitizenInfo maximum mana points
 ---@field stats CharacterStats Character stats
----@field currentStats CharacterStats Current stats (after buffs/debuffs)
+---@field position Position Position of the character in the world
+---@field current_stats CharacterStats Current stats (after buffs/debuffs)
 local Character = {}

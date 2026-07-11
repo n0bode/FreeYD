@@ -7,6 +7,7 @@ AccountState = {
     OFFLINE = 1,
     LOGGED = 2,
     BANNED = 3,
+    PLAYING = 6,
 }
 
 ---User account (mapped from the Zig `Account` struct).

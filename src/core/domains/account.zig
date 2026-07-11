@@ -3,10 +3,11 @@ const Character = @import("char.zig").Character;
 const std = @import("std");
 
 pub const AccountState = enum(u8) {
-    NEW_ACCOUNT = 0x00,
-    OFFLINE = 0x01,
-    LOGGED = 0x02,
-    BANNED = 0x03,
+    NEW_ACCOUNT = 0b00,
+    OFFLINE = 0b001,
+    LOGGED = 0b010,
+    BANNED = 0b011,
+    PLAYING = 0b110,
 };
 
 pub const Account = extern struct {

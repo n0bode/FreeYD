@@ -31,9 +31,12 @@ server:on("on_login", function(peer, req)
             peer:send_text("username or password is invalid")
             return false
         end
+        account:save(db)
+        peer:associate(account)
+        return true
     end
 
-    if account.state == AccountState.LOGGED then
+    if account.state ~= AccountState.OFFLINE then
         logger:info("account already logged: " .. req.username)
         peer:send_text("account is already logged in")
         return false

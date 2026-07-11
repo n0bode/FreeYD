@@ -93,12 +93,38 @@ test "toSnakeCase" {
 }
 
 pub fn walkGeneratorMTS(comptime T: anytype, L: *State) void {
-    if (@typeInfo(T) != .@"struct") return;
+    switch (@typeInfo(T)) {
+        .@"enum" => |u| {
+            const enumType = u.tag_type;
+            if (enumType == void) return;
+            if (@typeInfo(enumType) != .int) return;
 
-    LuaMapperStruct(T).bind(L);
-    inline for (std.meta.fields(T)) |field| {
-        if (@typeInfo(field.type) == .@"struct")
-            walkGeneratorMTS(field.type, L);
+            const name = @typeName(T);
+            const lastDot = std.mem.lastIndexOf(u8, name, ".");
+            const enumName = if (lastDot) |idx| name[(idx + 1)..] else name;
+
+            std.debug.print("ENUM = {s}\n", .{enumName});
+            L.newTable();
+            inline for (std.meta.fields(T)) |field| {
+                L.pushInteger(field.value);
+                L.setField(-2, field.name);
+            }
+            L.setGlobal(enumName);
+        },
+        .@"struct" => {
+            std.debug.print("{s}\n", .{@typeName(T)});
+            LuaMapperStruct(T).bind(L);
+            inline for (std.meta.fields(T)) |field| {
+                switch (@typeInfo(field.type)) {
+                    .@"struct" => walkGeneratorMTS(field.type, L),
+                    .@"enum" => walkGeneratorMTS(field.type, L),
+                    else => {},
+                }
+            }
+        },
+        else => {
+            return;
+        },
     }
 }
 
@@ -221,7 +247,7 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
                 const snakeName = toSnakeCase(field.name);
                 if (field.type == void) continue;
                 if (std.mem.eql(u8, keyname, snakeName)) {
-                    std.log.debug("({X}).{s}", .{ @intFromPtr(&@field(self, field.name)), keyname });
+                    std.log.debug("{s}({X}).{s}", .{ @typeName(T), @intFromPtr(&@field(self, field.name)), keyname });
                     switch (@typeInfo(field.type)) {
                         // use pointer instead of struct
                         .@"struct" => {

@@ -182,8 +182,8 @@ pub const PacketCharListData = extern struct {
             }
 
             const dbChar = account.characters[iChar];
-            self.positionX[iChar] = dbChar.positionX;
-            self.positionY[iChar] = dbChar.positionY;
+            self.positionX[iChar] = dbChar.position.x;
+            self.positionY[iChar] = dbChar.position.y;
             self.name[iChar] = dbChar.name;
             self.guild[iChar] = dbChar.guildId;
             self.gold[iChar] = dbChar.gold;
@@ -295,13 +295,10 @@ pub const PositionData = extern struct {
 pub const CharacterData = extern struct {
     name: [16]u8,
     cape: u8,
-    info: packed struct(u8) {
-        merchant: u6,
-        city: u2,
-    },
+    info: u8,
     guildId: u16,
     class: u8,
-    buffers: u8,
+    buffers: u8 = 0,
     gold: i32,
     exp: u32,
     position: PositionData,
@@ -324,7 +321,7 @@ pub const CharacterData = extern struct {
 
     regenHp: i8,
     regenMp: i8,
-    resists: [4]i8,
+    resists: [4]u8,
 
     slotId: u16,
     userId: u16,
@@ -342,25 +339,25 @@ pub const CharacterData = extern struct {
     rest: [404]u8 = [_]u8{0} ** 404,
 
     pub fn from(userId: u16, c: *domain.Character) CharacterData {
-        var self = std.mem.zeroInit(CharacterData, .{
+        var self: CharacterData = std.mem.zeroInit(CharacterData, .{
             .name = c.name,
             .cape = c.clan,
-            .info = c.info,
+            .info = @as(u8, @bitCast(c.citizenInfo)),
             .guildId = c.guildId,
             .class = @intFromEnum(c.class),
             .gold = c.gold,
             .exp = c.exp,
-            .position = .{ .x = c.positionX, .y = c.positionY },
+            .position = .{ .x = c.position.x, .y = c.position.y },
             .stats = CharStatsData.from(c.stats),
             .currentStats = CharStatsData.from(c.stats),
             .regenHp = c.regenHp,
             .regenMp = c.regenMp,
-            .skills = c.skills,
+            .skills = c.skillPoints,
             .criticRate = c.criticRate,
             .saveMana = c.saveMana,
             .skillBar0 = c.skillBar0,
             .guildRole = c.guildRole,
-            .resists = c.resists,
+            .resists = @as([4]u8, @bitCast(c.resists)),
             .slotId = c.slotId,
             .userId = userId,
             .skillBar1 = c.skillBar1,
@@ -380,6 +377,7 @@ pub const CharacterData = extern struct {
 };
 
 pub const PacketCharSpawn = extern struct {
+    header: Header,
     position: PositionData,
     character: CharacterData,
 };
@@ -416,4 +414,21 @@ pub const PacketCharDeleteOutput = extern struct {
 
 pub const PacketEmpty = extern struct {
     header: Header,
+};
+
+pub const PacketUpdateStats = extern struct {
+    header: Header,
+    stats: CharStatsData,
+    criticRate: u8,
+    saveMana: u8,
+    buffs: [32]u16,
+    guild: u16,
+    guildRole: u16,
+    resists: [4]u8,
+    regenHP: u8,
+    regenMP: u8,
+    hp: i32,
+    mp: i32,
+    magic: i32,
+    skills: u32,
 };

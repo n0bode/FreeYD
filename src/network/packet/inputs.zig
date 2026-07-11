@@ -11,8 +11,9 @@ pub const PacketData = union(OpcodeFromClient) {
     charCreate: PacketCharCreateInput,
     charDelete: PacketCharDeleteInput,
     enterWorld: PacketEnterWorldInput,
-    movement: PacketActionInput,
+    action: PacketActionInput,
     moveItem: PacketMoveItemInput,
+    updateAttribute: PacketUpdateAttribute,
 };
 
 // This a Packet abstract union received from Client
@@ -62,8 +63,9 @@ pub const OpcodeFromClient = enum(u16) {
     charCreate = @intFromEnum(Opcode.CHAR_CREATE),
     charDelete = @intFromEnum(Opcode.CHAR_DELETE),
     enterWorld = @intFromEnum(Opcode.CHAR_SELECT),
-    movement = @intFromEnum(Opcode.MOVEMENT),
+    action = @intFromEnum(Opcode.ACTION),
     moveItem = @intFromEnum(Opcode.ITEM_MOVE),
+    updateAttribute = @intFromEnum(Opcode.SET_ATTRIBUTE),
 
     // parse a u16 code to a struct union with correct data
     pub fn parse(code: u16) OpcodeFromClient {
@@ -76,10 +78,16 @@ pub const OpcodeFromClient = enum(u16) {
     }
 };
 
+pub const StorageType = enum(u8){
+    INVENTORY = 0,
+    EQUIPMENT = 1,
+    WAREHOUSE = 2,
+};
+
 pub const PacketMoveItemInput = extern struct {
-    destStorage: u8,
+    destStorage: StorageType,
     destSlot: u8,
-    sourceStorage: u8,
+    sourceStorage: StorageType,
     sourceSlot: u8,
     _0: u32 = 0,
 };
@@ -100,18 +108,17 @@ pub const PacketPinPasswordInput = extern struct {
     _unknown: [10]u8,
 };
 
+pub const PositionData = extern struct {
+    x: i16,
+    y: i16,
+};
+
 pub const PacketActionInput = extern struct {
-    position: extern struct {
-        x: i16,
-        y: i16,
-    },
+    position: PositionData,
     speed: i32,
     kind: i32,
-    destination: extern struct {
-        x: i16,
-        y: i16,
-    },
-    command: [24]u8,
+    destination: PositionData,
+    routes: [1]u8,
 };
 
 pub const PacketLoginInput = extern struct {
@@ -127,6 +134,18 @@ pub const PacketCharDeleteInput = extern struct {
     slot: i32,
     name: [16]u8,
     password: [12]u8,
+};
+
+pub const SectionAttribute = enum(u16) {
+    ATTRIBUTES = 0,
+    SKILL = 1,
+    UNK = 2,
+};
+
+pub const PacketUpdateAttribute = extern struct {
+    section: SectionAttribute,
+    index: u16,
+    peerId: u16,
 };
 
 const t = std.testing;

@@ -21,11 +21,13 @@ pub const Opcode = enum(u16) {
     CHAR_DELETED = 0x112,
     CHAR_SELECT = 0x213,
     CHAR_SELECTED = 0x114,
-    MOVEMENT = 0x366,
+    ACTION = 0x366,
     MOB_CREATE = 0x364,
     MOB_DELETE = 0x165,
     ITEM_MOVE = 0x0376,
     ITEM_CREATE = 0x182,
+    SET_ATTRIBUTE = 0x277,
+    UPDATE_STATS = 0x336,
 };
 
 // important to encrypt and decrypt message from client and to client

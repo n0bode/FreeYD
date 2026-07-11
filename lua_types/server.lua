@@ -6,10 +6,12 @@ local Server = {}
 ---Registers a handler for a server event.
 ---@overload fun(self: Server, event: "on_login",       handler: fun(peer: Peer, req: LoginRequest): boolean)
 ---@overload fun(self: Server, event: "on_pinpassword", handler: fun(peer: Peer, req: PinPasswordRequest): boolean)
----@overload fun(self: Server, event: "on_enterworld",  handler: fun(peer: Peer, req: EnterWorldRequest): boolean)
 ---@overload fun(self: Server, event: "on_disconnected", handler: fun(peer: Peer))
 ---@overload fun(self: Server, event: "on_create_char", handler: fun(peer: Peer, req: CreateCharRequest): boolean)
 ---@overload fun(self: Server, event: "on_delete_char", handler: fun(peer: Peer, req: DeleteCharRequest): boolean)
+---@overload fun(self: Server, event: "on_spawn_char",  handler: fun(peer: Peer, req: EnterWorldRequest): boolean)
+---@overload fun(self: Server, event: "on_update_attributes",  handler: fun(peer: Peer, req: UpdateAttributeRequest): boolean)
+---@overload fun(self: Server, event: "on_mob_action",  handler: fun(peer: Peer, req: MobActionRequest): boolean)
 ---@param event string Event name
 ---@param handler fun(peer: Peer, req: any) Callback invoked when the event fires
 function Server:on(event, handler) end

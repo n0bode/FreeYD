@@ -175,6 +175,25 @@ pub const Logic = struct {
                     self.callEvent("on_delete_char", peer, message),
                 );
             },
+            .enterWorld => {
+                return self.respondEnterWorld(
+                    peer,
+                    self.callEvent("on_spawn_char", peer, message),
+                );
+            },
+            .updateAttribute => {
+                return self.respondUpdateAttribute(
+                    peer,
+                    self.callEvent("on_update_attributes", peer, message),
+                );
+            },
+            .action => {
+                // TODO: how to do send all information to all
+                return self.respondAction(
+                    peer,
+                    self.callEvent("on_mob_action", peer, message),
+                );
+            },
             else => {},
         }
         return true;
@@ -257,6 +276,58 @@ pub const Logic = struct {
                 return false;
             };
         }
+        return true;
+    }
+
+    fn respondEnterWorld(_: *Logic, peer: *network.Peer, result: bool) bool {
+        if (result) {
+            const char = &peer.account.characters[@intCast(peer.account.charSelected)];
+            var pack = responses.PacketCharSpawn{
+                .header = .{
+                    .operationCode = @intFromEnum(Opcode.CHAR_SELECTED),
+                },
+                .character = .from(@intCast(peer.peerID), char),
+                .position = .{
+                    .x = char.position.x,
+                    .y = char.position.y,
+                },
+            };
+
+            peer.sendPacket(&pack, true) catch |err| {
+                logger.err("failed to send char spawn response: {s}", .{@errorName(err)});
+                return false;
+            };
+            return true;
+        }
+        return false;
+    }
+
+    fn respondUpdateAttribute(_: *Logic, peer: *network.Peer, result: bool) bool {
+        _ = peer;
+        _ = result;
+        return true;
+        // TODO: need receive mob id to send stats
+        //if (result) {
+        //    var pack = responses.PacketUpdateStats{
+        //        .header = .{
+        //            .operationCode = @intFromEnum(Opcode.UPDATE_STATS),
+        //        },
+        //        .stats = .fro
+        //        .attributes = .from(&peer.account),
+        //    };
+
+        //    peer.sendPacket(&pack, true) catch |err| {
+        //        logger.err("failed to send set attribute response: {s}", .{@errorName(err)});
+        //        return false;
+        //    };
+        //    return true;
+        //}
+        //return false;
+    }
+
+    fn respondAction(_: *Logic, peer: *network.Peer, result: bool) bool {
+        _ = peer;
+        _ = result;
         return true;
     }
 };

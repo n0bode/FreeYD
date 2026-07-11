@@ -51,3 +51,23 @@
 ---@field slot     integer Slot of the character to delete
 ---@field name     string  Name for confirmation (up to 16 chars)
 ---@field password string  Password for confirmation (up to 12 chars)
+
+---@enum AttributeSection
+AttributeSection = {
+    STATS = 0,
+    SKILLS = 1,
+    STATS_SKILLS = 2,
+}
+
+---Update attribute packet (`PacketUpdateAttributeInput`).
+---@class UpdateAttributeRequest
+---@field section  AttributeSection
+---@field index     integer  index of attribute to update (0-3), ex: 1 - str
+---@field peer_id integer    peer ID of the character to update
+
+---@class MobActionRequest
+---@field position    Position current position coordinate
+---@field destination Position destination coordinate
+---@field speed       integer Movement speed
+---@field kind        integer Action type
+---@field command     string  Raw command data (24 bytes)

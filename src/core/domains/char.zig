@@ -34,6 +34,11 @@ pub const CitizenInfo = packed struct(u8) {
     city: Cities = .ARMIA,
 };
 
+pub const Position = packed struct(u32) {
+    x: i16,
+    y: i16,
+};
+
 pub const Character = extern struct {
     accountId: u64 = 0,
     slotId: u8 = 0,
@@ -53,8 +58,7 @@ pub const Character = extern struct {
     gold: i32 = 0,
     exp: u32 = 0,
 
-    positionX: i16 = 0,
-    positionY: i16 = 0,
+    position: Position,
 
     stats: Stats,
     currentStats: Stats,
@@ -65,7 +69,7 @@ pub const Character = extern struct {
     skillPoints: u16,
     magic: u32,
 
-    statsBonus: u16,
+    attributePoints: u16,
     specialsBonus: u16,
     skillsBonus: u16,
 
@@ -85,9 +89,6 @@ pub const Character = extern struct {
     pub fn empty(class: Class) Character {
         var self = std.mem.zeroInit(Character, .{
             .class = class,
-            // born in train field
-            .positionX = 2096,
-            .positionY = 2096,
         });
 
         // in 7.54 FaceID, 1 = TK, 11 = FM, BM = 21, HT = 31

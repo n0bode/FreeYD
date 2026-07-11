@@ -12,7 +12,7 @@ const StatsStateBinding = Mapper(domain.StatsState);
 const SkillAttributesBinding = Mapper(domain.SkillAttributes);
 const ResistStatsBinding = Mapper(domain.ResitsStats);
 const CitizenBinding = Mapper(domain.CitizenInfo);
-const Cities = Mapper(domain.Cities);
+const PositionBinding = Mapper(domain.Position);
 
 pub fn toUserdata(L: *lua.State, idx: i32) ?*domain.Character {
     return mapper.toUserdata(L, idx);
@@ -33,6 +33,7 @@ pub fn bind(L: *lua.State) void {
     StatsStateBinding.bind(L);
     SkillAttributesBinding.bind(L);
     CitizenBinding.bind(L);
+    PositionBinding.bind(L);
     bindEnums(L);
 }
 

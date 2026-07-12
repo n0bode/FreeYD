@@ -1,0 +1,249 @@
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const BoundedArray = @import("boundedarray.zig").BoundedArray;
+
+pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
+    return struct {
+        const Self = @This();
+
+        pub const Point = struct {
+            x: i64,
+            y: i64,
+            data: T,
+        };
+
+        pub const Rect = struct {
+            x: i64 = 0,
+            y: i64 = 0,
+            width: u64 = 0,
+            height: u64 = 0,
+
+            fn left(self: Rect) i64 {
+                return self.x - @as(i64, @intCast(self.width / 2));
+            }
+
+            fn right(self: Rect) i64 {
+                return self.x + @as(i64, @intCast(self.width / 2));
+            }
+
+            fn top(self: Rect) i64 {
+                return self.y + @as(i64, @intCast(self.height / 2));
+            }
+
+            fn bottom(self: Rect) i64 {
+                return self.y - @as(i64, @intCast(self.height / 2));
+            }
+
+            pub fn contains(self: Rect, point: Point) bool {
+                return point.x >= self.left() and point.x <= self.right() and
+                    point.y >= self.bottom() and point.y <= self.top();
+            }
+
+            pub fn intersects(self: Rect, other: *Rect) bool {
+                return other.right() > self.left() and other.left() < self.right() and
+                    other.top() > self.bottom() and other.bottom() < self.top();
+            }
+        };
+
+        pub const Node = struct {
+            lt: ?*Node = null,
+            rt: ?*Node = null,
+            lb: ?*Node = null,
+            rb: ?*Node = null,
+
+            bounds: Rect,
+            items: BoundedArray(*Point, capacity) = .{},
+
+            pub fn init(rect: Rect) Node {
+                return .{ .bounds = rect };
+            }
+
+            pub fn isFull(self: Node) bool {
+                return self.items.len >= capacity;
+            }
+
+            pub fn push(self: *Node, pos: *Point) bool {
+                if (!self.bounds.contains(pos.*)) return false;
+                self.items.push(pos) catch {
+                    return false;
+                };
+                return true;
+            }
+        };
+
+        root: Node,
+        arena: std.heap.ArenaAllocator,
+        pub fn init(allocator: Allocator, size: u64) Self {
+            const bound = Rect{
+                .x = @intCast(size / 2),
+                .y = @intCast(size / 2),
+                .height = size,
+                .width = size,
+            };
+
+            return Self{
+                .arena = std.heap.ArenaAllocator.init(allocator),
+                .root = .init(bound),
+            };
+        }
+
+        pub fn deinit(self: Self) void {
+            self.arena.deinit();
+        }
+
+        fn subdivide(self: *Self, node: *Node) !void {
+            const allocator = self.arena.allocator();
+            const nodes = try allocator.alloc(Node, 4);
+
+            const w2 = node.bounds.width / 2;
+            const h2 = node.bounds.height / 2;
+
+            const w4: i64 = @intCast(node.bounds.width / 4);
+            const h4: i64 = @intCast(node.bounds.height / 4);
+
+            const posL = node.bounds.x - w4;
+            const posR = node.bounds.x + w4;
+
+            const posT = node.bounds.y + h4;
+            const posB = node.bounds.y - h4;
+
+            nodes[0] = .init(Rect{
+                .x = posL,
+                .y = posT,
+                .width = w2,
+                .height = h2,
+            });
+            node.lt = &nodes[0];
+
+            nodes[1] = .init(Rect{
+                .x = posR,
+                .y = posT,
+                .width = w2,
+                .height = h2,
+            });
+            node.rt = &nodes[1];
+
+            nodes[2] = .init(Rect{
+                .x = posL,
+                .y = posB,
+                .width = w2,
+                .height = h2,
+            });
+            node.lb = &nodes[2];
+
+            nodes[3] = .init(Rect{
+                .x = posR,
+                .y = posB,
+                .width = w2,
+                .height = h2,
+            });
+            node.rb = &nodes[3];
+
+            while (node.items.pop()) |item| {
+                for (nodes) |*subnode| {
+                    if (subnode.push(item)) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        pub fn insert(self: *Self, pos: *Point) !bool {
+            var node = &self.root;
+            while (node.bounds.contains(pos.*)) {
+                if (!node.isFull() and node.lt == null) {
+                    return node.push(pos);
+                }
+
+                // subidivde
+                if (node.isFull() and node.lt == null) {
+                    try self.subdivide(node);
+                }
+
+                const nodes = [_]?*Node{ node.lt, node.rb, node.rt, node.lb };
+                for (nodes) |region| {
+                    if (region) |subnode| {
+                        if (subnode.bounds.contains(pos.*)) {
+                            node = subnode;
+                            break;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        const FNEachFound = *const fn (userdata: *anyopaque, point: *Point) void;
+
+        fn searchDeep(self: *Self, rect: *Rect, node: *Node, userdata: *anyopaque, func: FNEachFound) void {
+            if (!node.bounds.intersects(rect)) {
+                return;
+            }
+
+            if (node.items.len > 0) {
+                for (0..node.items.len) |iPoint| {
+                    const point = (node.items.get(iPoint) catch {
+                        continue;
+                    }).*;
+                    func(userdata, point);
+                }
+                return;
+            }
+
+            if (node.lb) |subnode| {
+                self.searchDeep(rect, subnode, userdata, func);
+            }
+
+            if (node.lt) |subnode| {
+                self.searchDeep(rect, subnode, userdata, func);
+            }
+
+            if (node.rb) |subnode| {
+                self.searchDeep(rect, subnode, userdata, func);
+            }
+
+            if (node.rt) |subnode| {
+                self.searchDeep(rect, subnode, userdata, func);
+            }
+        }
+
+        pub fn listInArea(self: *Self, rect: Rect, userdata: *anyopaque, func: FNEachFound) void {
+            // Warn: recusive, need calculate stack usage
+            self.searchDeep(&rect, &self.root, userdata, func);
+        }
+    };
+}
+
+test "QuadTree - insert" {
+    const allocator = std.testing.allocator_instance.allocator();
+
+    const Q32 = QuadTree(i32, 1);
+
+    var qt = Q32.init(allocator, 100);
+    defer qt.deinit();
+
+    var point1 = Q32.Point{ .x = 25, .y = 25, .data = 0 };
+    var point2 = Q32.Point{ .x = 75, .y = 25, .data = 1 };
+    var point3 = Q32.Point{ .x = 25, .y = 75, .data = 2 };
+    var point4 = Q32.Point{ .x = 75, .y = 75, .data = 3 };
+    var point5 = Q32.Point{ .x = 90, .y = 90, .data = 4 };
+
+    try std.testing.expect(try qt.insert(&point1));
+    try std.testing.expect(try qt.insert(&point2));
+    try std.testing.expect(try qt.insert(&point3));
+    try std.testing.expect(try qt.insert(&point4));
+    try std.testing.expect(try qt.insert(&point5));
+
+    try std.testing.expect(qt.root.lb != null);
+    try std.testing.expectEqual(qt.root.lb.?.items.len, 1);
+
+    try std.testing.expect(qt.root.rb != null);
+    try std.testing.expect(qt.root.lt != null);
+
+    try std.testing.expect(qt.root.rb != null);
+    try std.testing.expect(qt.root.rt.?.lt != null);
+    try std.testing.expectEqual(1, qt.root.rt.?.lt.?.items.len);
+
+    try std.testing.expect(qt.root.rt.?.rt != null);
+    try std.testing.expectEqual(1, qt.root.rt.?.rt.?.items.len);
+}

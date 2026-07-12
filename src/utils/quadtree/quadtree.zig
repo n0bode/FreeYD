@@ -19,19 +19,19 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
             height: u64 = 0,
 
             fn left(self: Rect) i64 {
-                return self.x - @as(i64, @intCast(self.width / 2));
+                return self.x;
             }
 
             fn right(self: Rect) i64 {
-                return self.x + @as(i64, @intCast(self.width / 2));
-            }
-
-            fn top(self: Rect) i64 {
-                return self.y + @as(i64, @intCast(self.height / 2));
+                return self.x + @as(i64, @intCast(self.width));
             }
 
             fn bottom(self: Rect) i64 {
-                return self.y - @as(i64, @intCast(self.height / 2));
+                return self.y;
+            }
+
+            fn top(self: Rect) i64 {
+                return self.y + @as(i64, @intCast(self.height));
             }
 
             pub fn contains(self: Rect, point: Point) bool {
@@ -67,6 +67,8 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
                 self.items.push(pos) catch {
                     return false;
                 };
+
+                std.debug.print("Point({d}, {d}), inserted at: ({d},{d})[{d}, {d}]\n", .{ pos.x, pos.y, self.bounds.x, self.bounds.y, self.bounds.width, self.bounds.height });
                 return true;
             }
         };
@@ -75,8 +77,8 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
         arena: std.heap.ArenaAllocator,
         pub fn init(allocator: Allocator, size: u64) Self {
             const bound = Rect{
-                .x = @intCast(size / 2),
-                .y = @intCast(size / 2),
+                .x = 0,
+                .y = 0,
                 .height = size,
                 .width = size,
             };
@@ -98,46 +100,43 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
             const w2 = node.bounds.width / 2;
             const h2 = node.bounds.height / 2;
 
-            const w4: i64 = @intCast(node.bounds.width / 4);
-            const h4: i64 = @intCast(node.bounds.height / 4);
+            const posL = node.bounds.x;
+            const posR = node.bounds.x + @as(i64, @intCast(w2));
 
-            const posL = node.bounds.x - w4;
-            const posR = node.bounds.x + w4;
-
-            const posT = node.bounds.y + h4;
-            const posB = node.bounds.y - h4;
+            const posB = node.bounds.y;
+            const posT = node.bounds.y + @as(i64, @intCast(h2));
 
             nodes[0] = .init(Rect{
                 .x = posL,
-                .y = posT,
-                .width = w2,
-                .height = h2,
-            });
-            node.lt = &nodes[0];
-
-            nodes[1] = .init(Rect{
-                .x = posR,
-                .y = posT,
-                .width = w2,
-                .height = h2,
-            });
-            node.rt = &nodes[1];
-
-            nodes[2] = .init(Rect{
-                .x = posL,
                 .y = posB,
                 .width = w2,
                 .height = h2,
             });
-            node.lb = &nodes[2];
+            node.lb = &nodes[0];
+
+            nodes[1] = .init(Rect{
+                .x = posL,
+                .y = posT,
+                .width = w2,
+                .height = h2,
+            });
+            node.lt = &nodes[1];
+
+            nodes[2] = .init(Rect{
+                .x = posR,
+                .y = posB,
+                .width = w2,
+                .height = h2,
+            });
+            node.rb = &nodes[2];
 
             nodes[3] = .init(Rect{
                 .x = posR,
-                .y = posB,
+                .y = posT,
                 .width = w2,
                 .height = h2,
             });
-            node.rb = &nodes[3];
+            node.rt = &nodes[3];
 
             while (node.items.pop()) |item| {
                 for (nodes) |*subnode| {
@@ -157,7 +156,9 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
 
                 // subidivde
                 if (node.isFull() and node.lt == null) {
+                    std.debug.print("subdivide\n", .{});
                     try self.subdivide(node);
+                    std.debug.print("end subdivide\n", .{});
                 }
 
                 const nodes = [_]?*Node{ node.lt, node.rb, node.rt, node.lb };
@@ -241,8 +242,8 @@ test "QuadTree - insert" {
     try std.testing.expect(qt.root.lt != null);
 
     try std.testing.expect(qt.root.rb != null);
-    try std.testing.expect(qt.root.rt.?.lt != null);
-    try std.testing.expectEqual(1, qt.root.rt.?.lt.?.items.len);
+    try std.testing.expect(qt.root.rt.?.lb != null);
+    try std.testing.expectEqual(1, qt.root.rt.?.lb.?.items.len);
 
     try std.testing.expect(qt.root.rt.?.rt != null);
     try std.testing.expectEqual(1, qt.root.rt.?.rt.?.items.len);

@@ -1,14 +1,14 @@
 const Item = @import("item.zig").Item;
 const std = @import("std");
 
-pub const Class = enum(u8) {
+pub const CharacterClass = enum(u8) {
     TK = 0,
     FM = 1,
     BM = 2,
     HT = 3,
 };
 
-pub const Soul = enum(u8) {
+pub const CharacterSoul = enum(u8) {
     MORTAL = 0,
     GOD = 1,
     CELESTIAL = 2,
@@ -39,18 +39,37 @@ pub const Position = packed struct(u32) {
     y: i16,
 };
 
+pub const EquipmentSlot = enum(u8) {
+    face = 0,
+    head = 1,
+    body = 2,
+    pants = 3,
+    gloves = 4,
+    boots = 5,
+    weapon = 6,
+    shield = 7,
+    unk8 = 8,
+    unk9 = 9,
+    unk10 = 10,
+    unk11 = 11,
+    unk12 = 12,
+    unk13 = 13,
+    mount = 14,
+    unk15 = 15,
+};
+
 pub const Character = extern struct {
     accountId: u64 = 0,
     slotId: u8 = 0,
 
     name: [16]u8,
     clan: u8 = 0,
-    soul: Soul = .MORTAL,
+    soul: CharacterSoul = .MORTAL,
 
     citizenInfo: CitizenInfo,
 
     guildId: u16 = 0,
-    class: Class,
+    class: CharacterClass,
     guildRole: u8 = 0,
     rsv: u16 = 0,
     quest: u8 = 0,
@@ -86,7 +105,7 @@ pub const Character = extern struct {
 
     resists: ResistStats,
 
-    pub fn empty(class: Class) Character {
+    pub fn empty(class: CharacterClass) Character {
         var self = std.mem.zeroInit(Character, .{
             .class = class,
         });

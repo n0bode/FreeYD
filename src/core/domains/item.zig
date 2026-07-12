@@ -1,22 +1,11 @@
 const std = @import("std");
 
-pub const Item = extern struct {
-    itemID: u16,
-    effect: [3]u16,
-
-    pub fn zero() Item {
-        return Item{
-            .itemID = 0,
-            .effect = [_]u16{0} ** 3,
-        };
-    }
+pub const ItemAttribute = extern struct {
+    index: u8 = 0,
+    value: u8 = 0,
 };
 
-pub const IValue = extern struct {
-    index: u8,
-    value: u8,
-
-    pub fn zero() IValue {
-        return .{ .index = 0, .value = 0 };
-    }
+pub const Item = extern struct {
+    itemID: u16,
+    attributes: [3]ItemAttribute = [_]ItemAttribute{.{}} ** 3,
 };

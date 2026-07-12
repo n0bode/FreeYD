@@ -35,8 +35,8 @@ function Account:get_current_char() end
 
 ---Create a new character for the account.
 ---@param name string
----@param class CharaterClass
----@param slotId CharaterClass 0-3
+---@param class CharacterClass
+---@param slotId integer
 ---@param type CharacterSoul
 ---@param builder fun(char: Character) optional function to customize the character after creation
 ---@return Character?

@@ -53,7 +53,6 @@ pub const Logic = struct {
 
         bindings.AccountBinding.bind(L);
         bindings.CharacterBinding.bind(L);
-        bindings.ItemBinding.bind(L);
         bindings.PacketBinder.bind(L);
         bindings.DatabaseBinding.bind(L);
         bindings.PeerBinding.bind(L);

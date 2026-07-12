@@ -1,9 +1,9 @@
 build:
-	killall -SIGKILL freeyd 2>/dev/null || true
+	killall -SIGTERM freeyd 2>/dev/null || true
 	zig build
 
 run:
-	killall -SIGKILL freeyd 2>/dev/null || true
+	killall -SIGTERM freeyd 2>/dev/null || true
 	zig build run
 
 drop-accounts:

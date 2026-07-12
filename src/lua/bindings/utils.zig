@@ -128,6 +128,35 @@ pub fn walkGeneratorMTS(comptime T: anytype, L: *State) void {
     }
 }
 
+pub fn EnumMapper(comptime T: anytype) type {
+    return struct {
+        pub fn bind(L: *State) void {
+            switch (@typeInfo(T)) {
+                .@"enum" => |u| {
+                    const enumType = u.tag_type;
+                    if (enumType == void) return;
+                    if (@typeInfo(enumType) != .int) return;
+
+                    const name = @typeName(T);
+                    const lastDot = std.mem.lastIndexOf(u8, name, ".");
+                    const enumName = if (lastDot) |idx| name[(idx + 1)..] else name;
+
+                    std.log.debug("enum({s})\n", .{enumName});
+                    L.newTable();
+                    inline for (std.meta.fields(T)) |field| {
+                        L.pushInteger(field.value);
+                        L.setField(-2, field.name);
+                    }
+                    L.setGlobal(enumName);
+                },
+                else => {
+                    return;
+                },
+            }
+        }
+    };
+}
+
 pub fn bindFunctions(L: *State, metatableName: []const u8, fns: []const Reg) void {
     L.getMetatableByName(metatableName);
     L.setFuncs(fns);
@@ -137,6 +166,7 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
     return struct {
         pub const metatableName = "mt_" ++ @typeName(T);
         pub fn bind(L: *State) void {
+            std.debug.print("BIND: {s}\n", .{metatableName});
             _ = L.newMetatable(metatableName);
             L.pushFunction(lua__index);
             L.setField(-2, "__index");
@@ -160,15 +190,12 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
             return (L.toUserdata(*T, index) orelse return null).*;
         }
 
-        fn lua__newindex(L: *State) i32 {
+        pub fn lua__newindex(L: *State) i32 {
             const self = toUserdata(L, 1) orelse {
                 L.pushNil();
                 return 1;
             };
 
-            if (L.toUserdata(*anyopaque, 1)) |ptr| {
-                std.debug.print("set op({X}) o({X})\n", .{ @intFromPtr(ptr), @intFromPtr(ptr.*) });
-            }
             const keyname = L.checkString(2);
             inline for (std.meta.fields(T)) |field| {
                 const snakeName = toSnakeCase(field.name);
@@ -202,7 +229,6 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
                                 const value = L.toString(3);
                                 // @field made a copy, need pointer here to modify the original array
                                 var ptr = &@field(self, field.name);
-                                std.debug.print("memset ptr = {X}\n", .{@intFromPtr(ptr[0..].ptr)});
 
                                 const min = @min(ptr.len, value.len);
                                 const text = value[0..min];
@@ -211,7 +237,6 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
                                 if (min > 0) {
                                     @memcpy(ptr[0..min], text);
                                 }
-                                std.debug.print("tipo (3): {any} = {s} = {s}\n", .{ L.getLuaType(3), @field(self, field.name), ptr[0..min] });
                             } else {
                                 _ = L.panic("unsupported array type for field: " ++ field.name);
                             }
@@ -227,7 +252,7 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
             return 0;
         }
 
-        fn lua__index(L: *State) i32 {
+        pub fn lua__index(L: *State) i32 {
             const keyname = L.toString(2);
 
             _ = L.getMetatable(1);

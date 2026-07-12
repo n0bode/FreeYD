@@ -8,8 +8,8 @@ CharacterSoul = {
     SUBCELESTIAL = 3,
 }
 
----@enum CharaterClass
-CharaterClass = {
+---@enum CharacterClass
+CharacterClass = {
     TK = 0,
     FM = 1,
     BM = 2,
@@ -71,10 +71,41 @@ local CharacterStats = {}
 ---@field account_id integer ID of the account that owns this character
 ---@field skill_points integer amount available points skill
 ---@field slot_id integer Index of the character in the account's character list (0-3)
----@field class CharaterClass Character class
+---@field class CharacterClass Character class
 ---@field soul CharacterSoul Character god class
 ---@field citizen_info CitizenInfo maximum mana points
 ---@field stats CharacterStats Character stats
 ---@field position Position Position of the character in the world
 ---@field current_stats CharacterStats Current stats (after buffs/debuffs)
 local Character = {}
+
+---@enum EquipmentSlot
+EquipmentSlot = {
+    face = 0,
+    head = 1,
+    body = 2,
+    pants = 3,
+    gloves = 4,
+    boots = 5,
+    weapon = 6,
+    shield = 7,
+    unk8 = 8,
+    unk9 = 9,
+    unk10 = 10,
+    unk11 = 11,
+    unk12 = 12,
+    unk13 = 13,
+    mount = 14,
+    unk15 = 15,
+}
+
+
+---Sets an equipment item in the given slot.
+---@param slot EquipmentSlot The equipment slot to set
+---@param item Item The item to equip
+function Character:set_equipment(slot, item) end
+
+---Gets the equipment item in the given slot.
+---@param slot EquipmentSlot The equipment slot to get
+---@return Item?
+function Character:get_equipment(slot) end

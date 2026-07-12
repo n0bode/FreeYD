@@ -11,7 +11,6 @@ pub const DatabaseBinding = @import("database_binding.zig").DatabaseBinding;
 
 pub const AccountBinding = @import("account_binding.zig").AccountBinding;
 pub const CharacterBinding = @import("character_binding.zig").CharacterBinding;
-pub const ItemBinding = Mapper(domain.Item);
 
 const testing = @import("std").testing;
 test {

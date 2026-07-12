@@ -22,6 +22,18 @@ server:on("on_create_char", function(peer, req)
         char.position.y = 2042
         char.stats.level = 400
 
+        local full = { index = 43, value = 9 };
+        if char.class == CharacterClass.TK then
+            local set = 1106
+            for i = 1, 5 do
+                char:set_equipment(i, Item.new(set + 12 * (i - 1), full))
+            end
+
+            char:set_equipment(EquipmentSlot.weapon, Item.new(2704, full))
+            char:set_equipment(EquipmentSlot.shield, Item.new(2704))
+            char:set_equipment(EquipmentSlot.mount, Item.new(2378, full))
+        end
+
         -- TODO: ler de uma tabela ou algo do tipo
         char.citizen_info.city = Cities.CITY2
         char.skill_points = 255

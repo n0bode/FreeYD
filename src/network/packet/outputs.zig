@@ -198,7 +198,7 @@ pub const PacketCharListData = extern struct {
                 const dbEquip = dbChar.equipments[iEquip];
                 equipments[iEquip] = .{
                     .index = dbEquip.itemID,
-                    .effects = dbEquip.effect,
+                    .effects = @bitCast(dbEquip.attributes),
                 };
             }
         }

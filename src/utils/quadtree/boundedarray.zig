@@ -26,6 +26,21 @@ pub fn BoundedArray(comptime T: type, comptime capacity: usize) type {
             return self.items[self.len];
         }
 
+        pub fn removeAt(self: *BoundedArray(T, capacity), index: usize) !void {
+            if (index >= self.len) {
+                return error.OutOfBounds;
+            }
+
+            defer _ = self.pop();
+            if (index == self.len - 1) {
+                return;
+            }
+
+            for (index..(self.len - 1)) |i| {
+                self.items[index] = self.items[index + i];
+            }
+        }
+
         pub fn get(self: *BoundedArray(T, capacity), index: usize) !*T {
             if (index >= self.len) {
                 return error.OutOfBounds;

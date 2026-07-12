@@ -34,7 +34,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
                 return self.y + @as(i64, @intCast(self.height));
             }
 
-            pub fn contains(self: Rect, point: Point) bool {
+            pub fn contains(self: Rect, point: *Point) bool {
                 return point.x >= self.left() and point.x <= self.right() and
                     point.y >= self.bottom() and point.y <= self.top();
             }
@@ -63,7 +63,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
             }
 
             pub fn push(self: *Node, pos: *Point) bool {
-                if (!self.bounds.contains(pos.*)) return false;
+                if (!self.bounds.contains(pos)) return false;
                 self.items.push(pos) catch {
                     return false;
                 };
@@ -149,7 +149,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
 
         pub fn insert(self: *Self, pos: *Point) !bool {
             var node = &self.root;
-            while (node.bounds.contains(pos.*)) {
+            while (node.bounds.contains(pos)) {
                 if (!node.isFull() and node.lt == null) {
                     return node.push(pos);
                 }
@@ -164,7 +164,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
                 const nodes = [_]?*Node{ node.lt, node.rb, node.rt, node.lb };
                 for (nodes) |region| {
                     if (region) |subnode| {
-                        if (subnode.bounds.contains(pos.*)) {
+                        if (subnode.bounds.contains(pos)) {
                             node = subnode;
                             break;
                         }
@@ -175,10 +175,18 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
         }
 
         const FNEachFound = *const fn (userdata: *anyopaque, point: *Point) void;
+        const FNWalkNode = *const fn (userdata: *anyopaque, node: *Node, index: usize, point: *Point) bool;
 
-        fn searchDeep(self: *Self, rect: *Rect, node: *Node, userdata: *anyopaque, func: FNEachFound) void {
+        fn searchDeep(
+            self: *Self,
+            rect: *Rect,
+            node: *Node,
+            exclusive: bool,
+            userdata: *anyopaque,
+            func: FNWalkNode,
+        ) bool {
             if (!node.bounds.intersects(rect)) {
-                return;
+                return false;
             }
 
             if (node.items.len > 0) {
@@ -186,31 +194,48 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
                     const point = (node.items.get(iPoint) catch {
                         continue;
                     }).*;
-                    func(userdata, point);
+
+                    if (func(userdata, node, iPoint, point) and exclusive) {
+                        return true;
+                    }
                 }
-                return;
+                return !exclusive;
             }
 
             if (node.lb) |subnode| {
-                self.searchDeep(rect, subnode, userdata, func);
+                if (self.searchDeep(rect, subnode, exclusive, userdata, func) and exclusive) {
+                    return true;
+                }
             }
 
             if (node.lt) |subnode| {
-                self.searchDeep(rect, subnode, userdata, func);
+                if (self.searchDeep(rect, subnode, exclusive, userdata, func) and exclusive) {
+                    return true;
+                }
             }
 
             if (node.rb) |subnode| {
-                self.searchDeep(rect, subnode, userdata, func);
+                if (self.searchDeep(rect, subnode, exclusive, userdata, func) and exclusive) {
+                    return true;
+                }
             }
 
             if (node.rt) |subnode| {
-                self.searchDeep(rect, subnode, userdata, func);
+                if (self.searchDeep(rect, subnode, exclusive, userdata, func) and exclusive) {
+                    return true;
+                }
             }
+            return false;
         }
 
         pub fn listInArea(self: *Self, rect: Rect, userdata: *anyopaque, func: FNEachFound) void {
+            var wrap = WrapEachST{
+                .func = func,
+                .userdata = userdata,
+            };
             // Warn: recusive, need calculate stack usage
-            self.searchDeep(@constCast(&rect), &self.root, userdata, func);
+            // not exclusive = walk through all nodes in area
+            _ = self.searchDeep(@constCast(&rect), &self.root, false, &wrap, fnWrapEachToWalk);
         }
 
         pub fn listInAreaAlloc(self: *Self, allocator: Allocator, rect: Rect) ![]*Point {
@@ -220,10 +245,34 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
             return arr;
         }
 
+        pub fn remove(self: *Self, pos: *Point) bool {
+            var rect = Rect{
+                .x = pos.x,
+                .y = pos.y,
+                .width = 0,
+                .height = 0,
+            };
+
+            // exclusive = walk until found and remove, then stop
+            return self.searchDeep(&rect, &self.root, true, pos, fnRemoveFound);
+        }
+
         pub fn countInArea(self: *Self, rect: Rect) usize {
             var count: usize = 0;
             self.listInArea(rect, &count, fnCountingArea);
             return count;
+        }
+
+        fn fnRemoveFound(ptr: *anyopaque, node: *Node, iPoint: usize, point: *Point) bool {
+            const item: *Point = @ptrCast(@alignCast(ptr));
+            if (item == point) {
+                std.debug.print("achou {X}: {X}\n", .{ @intFromPtr(item), @intFromPtr(point) });
+                node.items.removeAt(iPoint) catch {
+                    return false;
+                };
+                return true;
+            }
+            return false;
         }
 
         fn fnCountingArea(ptr: *anyopaque, _: *Point) void {
@@ -234,6 +283,17 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
         fn fnArrayAlloc(ptr: *anyopaque, p: *Point) void {
             const array: []*Point = @ptrCast(@alignCast(ptr));
             array[array.len - 1] = p;
+        }
+
+        const WrapEachST = struct {
+            func: FNEachFound,
+            userdata: *anyopaque,
+        };
+
+        fn fnWrapEachToWalk(ptr: *anyopaque, _: *Node, _: usize, point: *Point) bool {
+            const wrap: *WrapEachST = @ptrCast(@alignCast(ptr));
+            wrap.func(wrap.userdata, point);
+            return false; // continue search
         }
     };
 }
@@ -252,6 +312,12 @@ test "QuadTree - insert" {
     var point4 = Q32.Point{ .x = 75, .y = 75, .data = 3 };
     var point5 = Q32.Point{ .x = 90, .y = 90, .data = 4 };
 
+    // ---------
+    // | 1 |0 1|
+    // |   |1 0|
+    // ---------
+    // | 1 | 1 |
+    // ---------
     try std.testing.expect(try qt.insert(&point1));
     try std.testing.expect(try qt.insert(&point2));
     try std.testing.expect(try qt.insert(&point3));
@@ -338,4 +404,36 @@ test "QuadTree - list" {
 
         try std.testing.expectEqual(case.count, qt.countInArea(case.area));
     }
+}
+
+test "QuadTree - remove" {
+    const allocator = std.testing.allocator_instance.allocator();
+
+    const Q32 = QuadTree(i32, 2);
+
+    var qt = Q32.init(allocator, 100);
+    defer qt.deinit();
+
+    var point1 = Q32.Point{ .x = 25, .y = 25, .data = 0 };
+    var point2 = Q32.Point{ .x = 40, .y = 40, .data = 1 };
+    var point3 = Q32.Point{ .x = 25, .y = 75, .data = 2 };
+    var point4 = Q32.Point{ .x = 75, .y = 75, .data = 3 };
+    var point5 = Q32.Point{ .x = 90, .y = 90, .data = 4 };
+
+    // ---------
+    // | 1 | 1 |
+    // ---------
+    // | 2 | 1 |
+    // ---------
+
+    try std.testing.expect(try qt.insert(&point1));
+    try std.testing.expect(try qt.insert(&point2));
+    try std.testing.expect(try qt.insert(&point3));
+    try std.testing.expect(try qt.insert(&point5));
+
+    try std.testing.expect(qt.remove(&point1));
+    try std.testing.expect(qt.root.lb != null);
+    try std.testing.expectEqual(1, qt.root.lb.?.items.len);
+
+    try std.testing.expect(!qt.remove(&point4));
 }

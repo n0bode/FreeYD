@@ -210,7 +210,30 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
 
         pub fn listInArea(self: *Self, rect: Rect, userdata: *anyopaque, func: FNEachFound) void {
             // Warn: recusive, need calculate stack usage
-            self.searchDeep(&rect, &self.root, userdata, func);
+            self.searchDeep(@constCast(&rect), &self.root, userdata, func);
+        }
+
+        pub fn listInAreaAlloc(self: *Self, allocator: Allocator, rect: Rect) ![]*Point {
+            const size = self.countInArea(rect);
+            const arr = try allocator.alloc(*Point, size);
+            self.listInArea(rect, @ptrCast(arr), fnArrayAlloc);
+            return arr;
+        }
+
+        pub fn countInArea(self: *Self, rect: Rect) usize {
+            var count: usize = 0;
+            self.listInArea(rect, &count, fnCountingArea);
+            return count;
+        }
+
+        fn fnCountingArea(ptr: *anyopaque, _: *Point) void {
+            const count: *usize = @ptrCast(@alignCast(ptr));
+            count.* = count.* + 1;
+        }
+
+        fn fnArrayAlloc(ptr: *anyopaque, p: *Point) void {
+            const array: []*Point = @ptrCast(@alignCast(ptr));
+            array[array.len - 1] = p;
         }
     };
 }
@@ -247,4 +270,72 @@ test "QuadTree - insert" {
 
     try std.testing.expect(qt.root.rt.?.rt != null);
     try std.testing.expectEqual(1, qt.root.rt.?.rt.?.items.len);
+}
+
+test "QuadTree - list" {
+    const allocator = std.testing.allocator_instance.allocator();
+
+    const Q32 = QuadTree(i32, 1);
+
+    var qt = Q32.init(allocator, 100);
+    defer qt.deinit();
+
+    var point1 = Q32.Point{ .x = 25, .y = 25, .data = 0 };
+    var point2 = Q32.Point{ .x = 75, .y = 25, .data = 1 };
+    var point3 = Q32.Point{ .x = 25, .y = 75, .data = 2 };
+    var point4 = Q32.Point{ .x = 75, .y = 75, .data = 3 };
+    var point5 = Q32.Point{ .x = 90, .y = 90, .data = 4 };
+
+    try std.testing.expect(try qt.insert(&point1));
+    try std.testing.expect(try qt.insert(&point2));
+    try std.testing.expect(try qt.insert(&point3));
+    try std.testing.expect(try qt.insert(&point4));
+    try std.testing.expect(try qt.insert(&point5));
+
+    const Case = struct {
+        count: usize = 0,
+        area: Q32.Rect,
+        expected: []*Q32.Point,
+
+        fn assert(self: *@This()) !void {
+            try std.testing.expectEqual(self.expected.len, self.count);
+        }
+    };
+
+    const FN = struct {
+        pub fn case(ptr: *anyopaque, point: *Q32.Point) void {
+            var data: *Case = @ptrCast(@alignCast(ptr));
+            std.debug.print("found point: {d} {d}\n", .{ point.x, point.y });
+            for (data.expected) |expec| {
+                if (expec == point) {
+                    data.count = data.count + 1;
+                }
+            }
+        }
+    };
+
+    var cases = [_]Case{
+        // all
+        .{
+            .area = .{ .x = 0, .y = 0, .width = 100, .height = 100 },
+            .expected = @constCast(&[_]*Q32.Point{ &point1, &point2, &point3, &point4, &point5 }),
+        },
+        // only q4 (q4)
+        .{
+            .area = .{ .x = 50, .y = 50, .width = 25, .height = 25 },
+            .expected = @constCast(&[_]*Q32.Point{&point4}),
+        },
+        // horizontal capture
+        .{
+            .area = .{ .x = 0, .y = 0, .width = 74, .height = 25 },
+            .expected = @constCast(&[_]*Q32.Point{ &point1, &point2 }),
+        },
+    };
+
+    for (&cases) |*case| {
+        qt.listInArea(case.area, case, FN.case);
+        try case.assert();
+
+        try std.testing.expectEqual(case.count, qt.countInArea(case.area));
+    }
 }

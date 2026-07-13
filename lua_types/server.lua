@@ -20,4 +20,9 @@ function Server:on(event, handler) end
 ---@return Database?
 function Server:get_database() end
 
+---Broadcasts an event to all connected peers.
+---@param event string Event name
+---@overload fun(self: Server, event: "spawn_mob", data: SpawnMob)
+function Server:multicast(event, data) end
+
 return Server

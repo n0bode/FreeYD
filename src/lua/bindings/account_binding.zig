@@ -56,6 +56,14 @@ pub fn bind(L: *lua.State) void {
                 },
             },
         },
+        .{
+            .name = "get_current_char",
+            .value = .{
+                .func = .{
+                    .func = lua__current_character,
+                },
+            },
+        },
     });
 }
 
@@ -152,6 +160,17 @@ fn lua__get_character(L: *lua.State) i32 {
     }
 
     const char: *domain.Character = &self.characters[@intCast(slotId)];
+    CharacterBinding.newUserdata(L, char);
+    L.pushNil();
+    return 2;
+}
+
+fn lua__current_character(L: *lua.State) i32 {
+    const self: *domain.Account = toUserdata(L, 1) orelse {
+        return L.throw("function must be called with an account instance");
+    };
+
+    const char: *domain.Character = &self.characters[@intCast(self.charSelected)];
     CharacterBinding.newUserdata(L, char);
     L.pushNil();
     return 2;

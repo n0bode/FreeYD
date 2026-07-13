@@ -20,9 +20,23 @@ server:on("on_spawn_char", function(peer, req)
         return false
     end
 
+    char.tab = "peerId:" .. peer.peer_id
     account.char_selected = req.char_slot
     account.state = AccountState.PLAYING
     account:save(db)
+
+    local player_mob = char:to_mob(peer.peer_id)
+    if not player_mob then
+        logger:error("Failed to convert character to mob for peer " .. peer.peer_id)
+        return false
+    end
+
+
+    -- notification all peers about new char
+    server:multicast("spawn_mob", {
+        position = char.position,
+        mob = player_mob,
+    })
 
     return true
 end)

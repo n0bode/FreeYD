@@ -1,6 +1,7 @@
 const std = @import("std");
 
 pub const ItemAttribute = extern struct {
+    // 43 = quality item +0 +1 +2 ...
     index: u8 = 0,
     value: u8 = 0,
 };

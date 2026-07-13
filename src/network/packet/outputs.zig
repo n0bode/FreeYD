@@ -98,7 +98,7 @@ test "packet - teste" {
     packet.encode(buffer[0..]);
 }
 
-pub const CharStatsData = extern struct {
+pub const StatsData = extern struct {
     level: u16,
     defense: i16,
     attack: i16,
@@ -107,7 +107,7 @@ pub const CharStatsData = extern struct {
         mechant: u4,
         direction: u4,
         speed: u4,
-        pkRate: u4,
+        pkLevel: u4,
     },
 
     maxHp: u16,
@@ -122,8 +122,8 @@ pub const CharStatsData = extern struct {
 
     specials: [4]u8,
 
-    pub fn from(s: domain.CharacterStats) CharStatsData {
-        return CharStatsData{
+    pub fn from(s: domain.Stats) StatsData {
+        return StatsData{
             .level = s.level,
             .defense = s.defense,
             .attack = s.attack,
@@ -168,7 +168,7 @@ pub const PacketCharListData = extern struct {
     positionX: [4]i16 = [_]i16{0} ** 4,
     positionY: [4]i16 = [_]i16{0} ** 4,
     name: [4][16]u8,
-    stats: [4]CharStatsData,
+    stats: [4]StatsData,
     equipments: [4][16]ItemData,
     guild: [4]u16,
     gold: [4]i32,
@@ -288,12 +288,15 @@ pub const PacketCharCreateOutput = extern struct {
 };
 
 pub const PositionData = extern struct {
-    x: i16,
-    y: i16,
+    x: i16 = 0,
+    y: i16 = 0,
 };
 
 pub const CharacterData = extern struct {
-    name: [16]u8,
+    name: [12]u8,
+    pkLevel: u8,
+    currentKill: u8,
+    totalKill: u16,
     cape: u8,
     info: u8,
     guildId: u16,
@@ -302,8 +305,8 @@ pub const CharacterData = extern struct {
     gold: i32,
     exp: u32,
     position: PositionData,
-    stats: CharStatsData,
-    currentStats: CharStatsData,
+    stats: StatsData,
+    currentStats: StatsData,
     equipments: [16]ItemData,
     storage: [64]ItemData,
 
@@ -315,7 +318,7 @@ pub const CharacterData = extern struct {
     criticRate: u8,
     saveMana: u8,
 
-    skillBar0: [4]u8,
+    skillBar0: [4]i8,
     guildRole: u8,
     _dunno2: u8 = 0,
 
@@ -327,7 +330,7 @@ pub const CharacterData = extern struct {
     userId: u16,
 
     drillingRate: u32,
-    skillBar1: [16]u8,
+    skillBar1: [16]i8,
 
     hold: i32,
     tab: [26]u8,
@@ -340,7 +343,10 @@ pub const CharacterData = extern struct {
 
     pub fn from(userId: u16, c: *domain.Character) CharacterData {
         var self: CharacterData = std.mem.zeroInit(CharacterData, .{
-            .name = c.name,
+            .name = c.name[0..12].*,
+            .pkLevel = c.pkLevel,
+            .totalKill = c.totalKill,
+            .currentKill = c.currentKill,
             .cape = c.clan,
             .info = @as(u8, @bitCast(c.citizenInfo)),
             .guildId = c.guildId,
@@ -348,8 +354,8 @@ pub const CharacterData = extern struct {
             .gold = c.gold,
             .exp = c.exp,
             .position = .{ .x = c.position.x, .y = c.position.y },
-            .stats = CharStatsData.from(c.stats),
-            .currentStats = CharStatsData.from(c.stats),
+            .stats = StatsData.from(c.stats),
+            .currentStats = StatsData.from(c.stats),
             .regenHp = c.regenHp,
             .regenMp = c.regenMp,
             .skills = c.skillPoints,
@@ -362,6 +368,7 @@ pub const CharacterData = extern struct {
             .userId = userId,
             .skillBar1 = c.skillBar1,
             .attackSpeed = c.attackSpeed,
+            .tab = c.tab,
         });
 
         inline for (c.equipments, 0..) |dbEquip, idx| {
@@ -383,22 +390,46 @@ pub const PacketCharSpawn = extern struct {
 };
 
 pub const MobData = extern struct {
-    entityId: u16,
+    mobId: u16,
     name: [12]u8,
-    chaos: u8,
+    pkLevel: u8,
     currentKill: u8,
     totalKill: u16,
-    items: [16]u16,
-    buffers: [16]u16,
+    equipments: [16]u16,
+    equipmentsAttributes: [16]u16,
     guildId: u16,
-    stats: CharStatsData,
+    stats: StatsData,
     spawn: u16,
     anctCode: [16]u8,
     tab: [26]u8,
-    _0: [4]u8,
+    _0: [4]u8 = [_]u8{0} ** 4,
+
+    pub fn from(mob: *domain.Mob) MobData {
+        var self = MobData{
+            .mobId = mob.mobId,
+            .name = mob.name[0..12].*,
+            .pkLevel = mob.pkLevel,
+            .currentKill = mob.currentKill,
+            .totalKill = mob.totalKill,
+            .guildId = mob.guildId,
+            .stats = StatsData.from(mob.stats),
+            .spawn = mob.spawnType,
+            .anctCode = [_]u8{0} ** 16,
+            .tab = mob.tab,
+            .equipments = [_]u16{0} ** 16,
+            .equipmentsAttributes = [_]u16{0} ** 16,
+        };
+
+        for (mob.equipments, 0..) |dbEquip, idx| {
+            self.equipments[idx] = dbEquip.itemID;
+            self.equipmentsAttributes[idx] = @bitCast(dbEquip.attributes[0]);
+        }
+        return self;
+    }
 };
 
 pub const PacketSpawnOutput = extern struct {
+    header: Header,
     position: PositionData,
     mob: MobData,
 };
@@ -418,7 +449,7 @@ pub const PacketEmpty = extern struct {
 
 pub const PacketUpdateStats = extern struct {
     header: Header,
-    stats: CharStatsData,
+    stats: StatsData,
     criticRate: u8,
     saveMana: u8,
     buffs: [32]u16,

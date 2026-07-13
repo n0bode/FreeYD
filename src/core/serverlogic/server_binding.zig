@@ -36,6 +36,15 @@ pub fn bind(logic: *Logic) void {
                 },
             },
         },
+        .{
+            .name = "multicast",
+            .value = .{
+                .func = .{
+                    .func = lua_multicast,
+                    .userdata = logic,
+                },
+            },
+        },
     });
 }
 
@@ -65,4 +74,16 @@ fn lua_get_database(L: *State) i32 {
 
     DatabaseBinding.newUserdata(L, .{ .db = self.db, .io = self.io });
     return 1;
+}
+
+fn lua_multicast(L: *State) i32 {
+    const self: *Logic = L.toUserdata(Logic, L.upValueIndex(2)) orelse {
+        L.pushNil();
+        return 1;
+    };
+
+    const eventName = L.checkString(2);
+
+    _ = self.execCommand(eventName, L);
+    return 0;
 }

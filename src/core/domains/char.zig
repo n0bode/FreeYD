@@ -1,5 +1,9 @@
-const Item = @import("item.zig").Item;
 const std = @import("std");
+const domain = @import("domains.zig");
+
+const Stats = domain.Stats;
+const Item = domain.Item;
+const ResistStats = domain.ResitsStats;
 
 pub const CharacterClass = enum(u8) {
     TK = 0,
@@ -13,13 +17,6 @@ pub const CharacterSoul = enum(u8) {
     GOD = 1,
     CELESTIAL = 2,
     SUBCELESTIAL = 3,
-};
-
-pub const ResistStats = packed struct(u32) {
-    ice: u8,
-    fire: u8,
-    element: u8,
-    lighting: u8,
 };
 
 pub const Cities = enum(u2) {
@@ -63,6 +60,12 @@ pub const Character = extern struct {
     slotId: u8 = 0,
 
     name: [16]u8,
+    tab: [26]u8,
+
+    pkLevel: u8 = 255,
+    totalKill: u16 = 0,
+    currentKill: u8 = 0,
+
     clan: u8 = 0,
     soul: CharacterSoul = .MORTAL,
 
@@ -95,8 +98,8 @@ pub const Character = extern struct {
     criticRate: u8,
     saveMana: u8,
 
-    skillBar0: [4]u8,
-    skillBar1: [16]u8,
+    skillBar0: [4]i8,
+    skillBar1: [16]i8,
     guildLevel: u8,
 
     regenHp: i8,
@@ -110,46 +113,31 @@ pub const Character = extern struct {
             .class = class,
         });
 
+        self.skillBar0 = [_]i8{-1} ** 4;
+        self.skillBar1 = [_]i8{-1} ** 16;
+
         // in 7.54 FaceID, 1 = TK, 11 = FM, BM = 21, HT = 31
         self.equipments[0].itemID = 1 + @as(u16, @intCast(@intFromEnum(class))) * 10;
         return self;
     }
-};
 
-pub const StatsState = packed struct(u16) {
-    // question: what is it?
-    merchant: u4 = 0,
-    // question: what is it?
-    direction: u4 = 0,
-    // movement speed of character
-    movementSpeed: u4 = 0,
-    // level of PK
-    pkLevel: u4 = 0,
-};
+    pub fn toMob(self: *Character, userId: u16) domain.Mob {
+        var mob = domain.Mob{
+            .mobId = userId,
+            .name = self.name,
+            .pkLevel = self.pkLevel,
+            .currentKill = self.currentKill,
+            .totalKill = self.totalKill,
+            .equipments = self.equipments,
+            .buffers = [_]domain.Buffer{.{}} ** 16,
+            .guildId = self.guildId,
+            .stats = self.currentStats,
+            .spawnType = 1,
+            .tab = self.tab,
+        };
 
-pub const SkillAttributes = packed struct(u32) {
-    // weapon
-    skill0: u8 = 0,
-    // class: BM (elemental)
-    skill1: u8 = 0,
-    // class: BM (evocation)
-    skill2: u8 = 0,
-    // class: BM (nature)
-    skill3: u8 = 0,
-};
-
-pub const Stats = extern struct {
-    level: u16 = 1,
-    defense: i16 = 10,
-    attack: i16 = 50,
-    state: StatsState,
-    maxHp: u16 = 100,
-    maxMp: u16 = 100,
-    hp: u16 = 100,
-    mp: u16 = 100,
-    str: i16 = 0,
-    int: i16 = 0,
-    dex: i16 = 0,
-    con: i16 = 0,
-    skills: SkillAttributes,
+        mob.name[12] = 0;
+        mob.name[13] = 0;
+        return mob;
+    }
 };

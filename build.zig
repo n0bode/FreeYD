@@ -30,22 +30,17 @@ pub fn build(b: *std.Build) void {
     // to our consumers. We must give it a name because a Zig package can expose
     // multiple modules and consumers will need to be able to specify which
     // module they want to access.
-    const coreMod = b.addModule("core", .{
-        // The root source file is the "entry point" of this module. Users of
-        // this module will only be able to access public declarations contained
-        // in this file, which means that if you have declarations that you
-        // intend to expose to consumers that were defined in other files part
-        // of this module, you will have to make sure to re-export them from
-        // the root file.
-        .root_source_file = b.path("src/core/core.zig"),
-        // Later on we'll use this module as the root module of a test executable
-        // which requires us to specify a target.
-        .target = target,
-    });
-
     const utils = b.addModule("utils", .{
         .root_source_file = b.path("src/utils/utils.zig"),
         .target = target,
+    });
+
+    const coreMod = b.addModule("core", .{
+        .root_source_file = b.path("src/core/core.zig"),
+        .target = target,
+        .imports = &.{
+            .{ .name = "utils", .module = utils },
+        },
     });
 
     const network = b.addModule("network", .{ .root_source_file = b.path("src/network/network.zig"), .target = target, .imports = &.{

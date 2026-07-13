@@ -12,6 +12,7 @@ const responses = network.responses;
 const Opcode = network.Opcode;
 
 const cwd = std.Io.Dir.cwd();
+const parsers = @import("parsers.zig");
 
 pub const lua = @import("lua");
 const State = lua.State;
@@ -56,6 +57,7 @@ pub const Logic = struct {
         bindings.PacketBinder.bind(L);
         bindings.DatabaseBinding.bind(L);
         bindings.PeerBinding.bind(L);
+        bindings.MobBinding.bind(L);
         ServerBinding.bind(self);
     }
 
@@ -327,6 +329,28 @@ pub const Logic = struct {
     fn respondAction(_: *Logic, peer: *network.Peer, result: bool) bool {
         _ = peer;
         _ = result;
+        return true;
+    }
+
+    pub fn execCommand(self: *Logic, command: []const u8, L: *State) bool {
+        if (std.mem.startsWith(u8, command, "spawn_mob")) {
+            var packet = parsers.parseToPacketSpawn(L) catch |err| {
+                logger.err("failed to parse lua to packet: {any}", .{err});
+                return false;
+            };
+
+            for (self.server.peers) |pp| {
+                if (pp) |peer| {
+                    if (peer.state == .Connected) {
+                        peer.sendPacket(&packet, true) catch |err| {
+                            logger.err("failed to send spawn mob packet: {s}", .{@errorName(err)});
+                            continue;
+                        };
+                    }
+                }
+            }
+            return true;
+        }
         return true;
     }
 };

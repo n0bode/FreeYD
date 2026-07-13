@@ -27,7 +27,7 @@ local SkillAttributes = {}
 ---@field merchant integer
 ---@field direction integer
 ---@field movement_speed integer
----@field pkLevel integer
+---@field pk_level integer
 local CharacterStatsState = {};
 
 ---@enum Cities
@@ -77,6 +77,7 @@ local CharacterStats = {}
 ---@field stats CharacterStats Character stats
 ---@field position Position Position of the character in the world
 ---@field current_stats CharacterStats Current stats (after buffs/debuffs)
+---@field tab string Text used in game above the mob head
 local Character = {}
 
 ---@enum EquipmentSlot
@@ -109,3 +110,8 @@ function Character:set_equipment(slot, item) end
 ---@param slot EquipmentSlot The equipment slot to get
 ---@return Item?
 function Character:get_equipment(slot) end
+
+---Return a mob model from the character class.
+---@param peer_id integer The peer ID of the player
+---@return Mob?
+function Character:to_mob(peer_id) end

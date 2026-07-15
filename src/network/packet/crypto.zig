@@ -30,7 +30,6 @@ pub fn descrypt(bMessage: []u8) !Header {
     const iKeyword: u16 = @as(u16, @intCast(bMessage[2])) * 2;
     const checksum = bMessage[3];
 
-    std.debug.print("size = {d}\n", .{size});
     const keyword = keywords[iKeyword];
     for (4..size, 0..) |i, count| {
         const byte = bMessage[i];

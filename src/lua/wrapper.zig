@@ -240,14 +240,14 @@ pub const State = struct {
     pub fn doFile(self: State, path: []const u8) !void {
         try self.loadFile(path);
         if (!self.pcall(0, 0)) {
-            std.debug.print("lua error: {s}", .{self.toString(-1)});
+            logger.err("lua error: {s}", .{self.toString(-1)});
             return error.DoFile;
         }
     }
 
     pub fn loadString(self: State, script: []const u8) !void {
         if (c.luaL_loadstring(self.L, script.ptr) != c.LUA_OK) {
-            std.debug.print("lua error: {s}", .{self.toString(-1)});
+            logger.err("lua error: {s}", .{self.toString(-1)});
             return error.LoadString;
         }
     }

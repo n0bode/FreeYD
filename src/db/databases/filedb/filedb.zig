@@ -8,6 +8,8 @@ const Item = db.Item;
 
 const cwd = std.Io.Dir.cwd();
 
+const logger = std.log.scoped(.fileDB);
+
 pub const FileDB = struct {
     path: []const u8,
     rand: std.Random.DefaultPrng,
@@ -122,7 +124,7 @@ pub const FileDB = struct {
         const file = cwd.createFile(io, path, .{
             .exclusive = exclusive,
         }) catch |err| {
-            std.debug.print("erro = {s}\n", .{@errorName(err)});
+            logger.err("error to create file: {s}", .{@errorName(err)});
             return false;
         };
         defer file.close(io);

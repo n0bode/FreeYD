@@ -12,7 +12,6 @@ const responses = network.responses;
 const Opcode = network.Opcode;
 
 const cwd = std.Io.Dir.cwd();
-const parsers = @import("parsers.zig");
 
 pub const lua = @import("lua");
 const State = lua.State;
@@ -192,8 +191,12 @@ pub const Logic = struct {
                 // TODO: how to do send all information to all
                 return self.respondAction(
                     peer,
-                    self.callEvent("on_mob_action", peer, message),
+                    self.callEvent("on_mob_move", peer, message),
                 );
+            },
+            .chatWhisper => {
+                _ = self.callEvent("on_whisper", peer, message);
+                return true;
             },
             else => {},
         }
@@ -222,10 +225,9 @@ pub const Logic = struct {
             const Respond = network.responses.PacketCharListOutput;
 
             var packet: Respond = .from(&peer.account, .enterAccount);
-            peer.sendPacket(&packet, true) catch |err| {
+            peer.sendPacket(&packet) catch |err| {
                 logger.err("failed to send login response: {s}", .{@errorName(err)});
             };
-            peer.changeState(.Connected);
             // keep-connection
             return true;
         }
@@ -236,7 +238,6 @@ pub const Logic = struct {
     fn respondPin(_: *Logic, peer: *network.Peer, result: bool) bool {
         if (!result) {
             peer.sendCode(@intFromEnum(Opcode.PIN_FAIL)) catch {
-                // close-connection: fail to send code
                 return false;
             };
         }
@@ -257,7 +258,7 @@ pub const Logic = struct {
                 .characters = .from(&peer.account),
             };
 
-            peer.sendPacket(&pack, true) catch {
+            peer.sendPacket(&pack) catch {
                 return false;
             };
         }
@@ -273,7 +274,7 @@ pub const Logic = struct {
                 .characters = .from(&peer.account),
             };
 
-            peer.sendPacket(&pack, true) catch {
+            peer.sendPacket(&pack) catch {
                 return false;
             };
         }
@@ -281,26 +282,29 @@ pub const Logic = struct {
     }
 
     fn respondEnterWorld(_: *Logic, peer: *network.Peer, result: bool) bool {
-        if (result) {
-            const char = &peer.account.characters[@intCast(peer.account.charSelected)];
-            var pack = responses.PacketCharSpawn{
-                .header = .{
-                    .operationCode = @intFromEnum(Opcode.CHAR_SELECTED),
-                },
-                .character = .from(@intCast(peer.peerID), char),
-                .position = .{
-                    .x = char.position.x,
-                    .y = char.position.y,
-                },
-            };
+        _ = peer;
+        _ = result;
+        return true;
+        // if (result) {
+        //     const char = &peer.account.characters[@intCast(peer.account.charSelected)];
+        //     var pack = responses.PacketCharSpawn{
+        //         .header = .{
+        //             .operationCode = @intFromEnum(Opcode.CHAR_SELECTED),
+        //         },
+        //         .character = .from(@intCast(peer.peerID), char),
+        //         .position = .{
+        //             .x = char.position.x,
+        //             .y = char.position.y,
+        //         },
+        //     };
 
-            peer.sendPacket(&pack, true) catch |err| {
-                logger.err("failed to send char spawn response: {s}", .{@errorName(err)});
-                return false;
-            };
-            return true;
-        }
-        return false;
+        //     peer.sendPacket(&pack, true) catch |err| {
+        //         logger.err("failed to send char spawn response: {s}", .{@errorName(err)});
+        //         return false;
+        //     };
+        //     return true;
+        // }
+        // return false;
     }
 
     fn respondUpdateAttribute(_: *Logic, peer: *network.Peer, result: bool) bool {
@@ -332,25 +336,13 @@ pub const Logic = struct {
         return true;
     }
 
-    pub fn execCommand(self: *Logic, command: []const u8, L: *State) bool {
-        if (std.mem.startsWith(u8, command, "spawn_mob")) {
-            var packet = parsers.parseToPacketSpawn(L) catch |err| {
-                logger.err("failed to parse lua to packet: {any}", .{err});
-                return false;
-            };
-
-            for (self.server.peers) |pp| {
-                if (pp) |peer| {
-                    if (peer.state == .Connected) {
-                        peer.sendPacket(&packet, true) catch |err| {
-                            logger.err("failed to send spawn mob packet: {s}", .{@errorName(err)});
-                            continue;
-                        };
-                    }
+    pub fn execCommand(self: *Logic, command: []const u8, L: *State) !void {
+        for (self.server.peers) |pp| {
+            if (pp) |peer| {
+                if (peer.state == .Playing) {
+                    _ = bindings.PeerCommands.dispatch(peer, command, L);
                 }
             }
-            return true;
         }
-        return true;
     }
 };

@@ -2,6 +2,7 @@ const std = @import("std");
 const brain = @import("brain");
 
 const domain = @import("core").domains;
+const Server = @import("server.zig").Server;
 
 const Header = @import("packet/packet.zig").Header;
 const Opcode = @import("packet/packet.zig").Opcode;
@@ -12,7 +13,6 @@ const packets = @import("packet/packet.zig").server;
 const packetsClient = @import("packet/packet.zig").client;
 
 const Account = @import("core").domains.Account;
-const Character = @import("core").domains.Character;
 
 const Io = std.Io;
 const net = Io.net;
@@ -25,24 +25,13 @@ const logger = std.log.scoped(.peer);
 
 const INIT_CODE = 0x1F11F311;
 
-pub const PeerCallback = struct {
-    onChangeState: ?struct {
-        userdata: *anyopaque,
-        func: *const fn (*anyopaque, std.Io, *Peer, Peer.State) void,
-    },
-    onReceivePacket: ?struct {
-        userdata: *anyopaque,
-        func: *const fn (*anyopaque, *Peer, ?*PacketInput) bool,
-    },
-};
-
 pub const Peer = struct {
     pub const State = enum(u4) {
         Invalid = 0b0000,
         Empty = 0b0001,
         Accepted = 0b0010,
         Logged = 0b0110,
-        Connected = 0b1110,
+        Playing = 0b1110,
         Disconnected = 0b0100,
     };
 
@@ -52,81 +41,46 @@ pub const Peer = struct {
         charSelected: i8 = 0,
     };
 
-    peerID: u32,
+    peerId: u32,
     stream: Stream,
     state: State,
-    io: std.Io,
 
-    bufferReader: [10 * 1024]u8,
-    bufferWriter: [10 * 1024]u8,
+    bufferReader: [10 * 1024]u8 = undefined,
+    bufferWriter: [10 * 1024]u8 = undefined,
 
-    reader: net.Stream.Reader,
-    writer: net.Stream.Writer,
+    reader: net.Stream.Reader = undefined,
+    writer: net.Stream.Writer = undefined,
 
-    account: Account,
+    account: Account = undefined,
     playerState: PlayerState = .{},
+    server: *Server,
 
     lastReceiveTime: u64 = 0,
-    callbacks: PeerCallback,
-
-    pub fn initAlloc(
-        allocator: std.mem.Allocator,
-        userID: u32,
-        stream: Stream,
-        callbacks: PeerCallback,
-    ) !*Peer {
-        const peer = try allocator.create(Peer);
-        peer.* = Peer.init(userID, stream, callbacks);
-        return peer;
-    }
-
     pub fn init(
-        userID: u32,
+        server: *Server,
+        peerId: u32,
         stream: Stream,
-        callbacks: PeerCallback,
     ) Peer {
         return .{
-            .stream = stream,
-            .peerID = userID,
             .state = .Accepted,
-            .reader = undefined,
-            .bufferReader = undefined,
-            .bufferWriter = undefined,
-            .writer = undefined,
-            .account = undefined,
-            .callbacks = callbacks,
-            .io = undefined,
+            .server = server,
+            .peerId = peerId,
+            .stream = stream,
         };
     }
 
-    pub fn empty() Peer {
-        return Peer{
-            .stream = undefined,
-            .peerID = 0,
-            .state = .Empty,
-            .reader = undefined,
-            .bufferReader = undefined,
-            .bufferWriter = undefined,
-            .account = undefined,
-            .writer = undefined,
-            .callbacks = undefined,
-            .io = undefined,
-        };
-    }
-
-    pub fn deinit(self: Peer, io: std.Io) void {
+    pub fn deinit(self: *Peer, io: std.Io) void {
         self.stream.close(io);
     }
 
     pub fn accept(self: *Peer, io: Io, group: *Io.Group) !void {
-        self.io = io;
         self.reader = self.stream.reader(io, &self.bufferReader);
         const reader = &self.reader.interface;
 
         self.writer = self.stream.writer(io, &self.bufferWriter);
 
         const initCode = try reader.takeInt(u32, .little);
-        logger.debug("[{d}] initcode => {X}", .{ self.peerID, initCode });
+        logger.debug("[{d}] initcode => {X}", .{ self.peerId, initCode });
         if (initCode != INIT_CODE) {
             self.state = .Invalid;
             return error.InvalidInitCode;
@@ -135,56 +89,56 @@ pub const Peer = struct {
         group.async(io, Peer.readMessages, .{ self, reader });
     }
 
-    pub fn sendTextMessage(self: *Peer, format: []const u8) !void {
-        var packet = packets.PacketMessageTextOutput{
-            .header = .{
-                // must index = 0 and time = 0
-                .operationCode = @intFromEnum(Opcode.TEXTMESSAGE),
-            },
-            .text = [_]u8{0} ** 96,
-        };
-
-        const min = @min(packet.text.len, format.len);
-        @memcpy(packet.text[0..min], format[0..min]);
-
-        try self.sendPacket(&packet, false);
-    }
-
-    pub fn sendPacket(self: *Peer, message: anytype, injectHeader: bool) !void {
-        if (@typeInfo(@TypeOf(message)) != .pointer) {
-            @compileError("message must be a pointer");
-        }
-
-        if (injectHeader) {
-            message.header.index = @intCast(self.peerID);
-            message.header.time = std.time.epoch.unix;
-        }
-
-        var writer = &self.writer.interface;
-        const encoded = encode(message);
-
-        logger.info("{b64}", .{encoded});
-        try writer.writeAll(encoded);
-        try writer.flush();
-    }
-
     pub fn sendCode(self: *Peer, code: u16) !void {
         var packet = packets.PacketEmpty{
             .header = .{
                 .operationCode = code,
-                .index = @intCast(self.peerID),
+                .index = @intCast(self.peerId),
                 .time = std.time.epoch.unix,
                 .verifier = undefined,
             },
         };
+        try self.sendPacket(&packet);
+    }
 
-        return try self.sendPacket(&packet, true);
+    pub fn sendTextMessage(self: *Peer, text: []const u8) !void {
+        var packet = packets.PacketMessageTextOutput{
+            .header = .{
+                .operationCode = @intFromEnum(Opcode.TEXTMESSAGE),
+            },
+        };
+        const min = @min(packet.text.len, text.len);
+        @memcpy(packet.text[0..min], text[0..min]);
+        try self.sendPacket(&packet);
+    }
+
+    pub fn sendRawPacket(self: *Peer, data: []u8) !void {
+        var writer = &self.writer.interface;
+        try writer.writeAll(data);
+        try writer.flush();
+    }
+
+    pub fn getTime(self: *Peer) i64 {
+        return self.server.getServerTime();
+    }
+
+    pub fn sendPacket(self: *Peer, message: anytype) !void {
+        if (@typeInfo(@TypeOf(message)) != .pointer) {
+            @compileError("message must be a pointer");
+        }
+
+        if (message.header.time == 0)
+            message.header.time = @as(u32, @intCast(self.getTime()));
+
+        if (message.header.index == 0)
+            message.header.index = @intCast(self.peerId);
+
+        const encoded = encode(message);
+        try self.sendRawPacket(encoded);
     }
 
     pub fn changeState(self: *Peer, state: State) void {
-        if (self.callbacks.onChangeState) |callback| {
-            callback.func(callback.userdata, self.io, self, state);
-        }
+        self.server.onPeerChangeState(self, state);
         self.state = state;
     }
 
@@ -194,11 +148,11 @@ pub const Peer = struct {
 
     pub fn setAccount(self: *Peer, account: Account) void {
         self.account = account;
-        self.changeState(.Connected);
+        self.changeState(.Logged);
     }
 
     fn readMessages(self: *Peer, reader: *Io.Reader) void {
-        const peerID = self.peerID;
+        const peerId = self.peerId;
         //defer self.stream.socket.close(self.io);
 
         // first message has a initCode,
@@ -210,7 +164,7 @@ pub const Peer = struct {
             };
 
             const size: u16 = @bitCast(sizeBytes[0..2].*);
-            logger.debug("[{d}] waiting message size={d}", .{ peerID, size });
+            logger.debug("[{d}] waiting message size={d}", .{ peerId, size });
             const data = reader.take(@intCast(size)) catch |err| {
                 logger.warn("failed to get message {s}", .{@errorName(err)});
                 self.changeState(.Disconnected);
@@ -218,93 +172,24 @@ pub const Peer = struct {
             };
 
             var packetDecoded = PacketInput.decode(data) catch |err| {
-                logger.debug("[{d}] failed to accept message: {s}", .{ peerID, @errorName(err) });
+                logger.err("[{d}] failed to accept message: {s}", .{ peerId, @errorName(err) });
                 self.sendTextMessage("client is invalid") catch {};
                 self.changeState(.Disconnected);
                 continue;
             };
 
-            self.lastReceiveTime = std.time.epoch.unix;
-            if (self.callbacks.onReceivePacket) |callback| {
-                if (!callback.func(callback.userdata, self, &packetDecoded)) {
-                    self.changeState(.Disconnected);
-                }
+            logger.info("({X}) OPCODE: {X} FROM {X} AT {d}", .{
+                self.peerId,
+                packetDecoded.header.operationCode,
+                packetDecoded.header.index,
+                packetDecoded.header.time,
+            });
+
+            self.lastReceiveTime = @intCast(self.getTime());
+            if (!self.server.onPeerReceivePacket(self, &packetDecoded)) {
+                logger.info("peer disconnected by packet execution failed", .{});
+                self.changeState(.Disconnected);
             }
-
-            // switch (packetDecoded.data) {
-            //     .login => |login| {
-            //         if (!self.onLogin(self.io, login)) {
-            //             self.sendTextMessage("username or password is invalid") catch {
-            //                 logger.err("failed to respond", .{});
-            //             };
-            //             self.callChangeState(.Invalid);
-            //             return;
-            //         }
-
-            //         self.callChangeState(.Connected);
-            //     },
-            //     else => {},
-            // }
-
-            //switch (packetDecoded) {
-            // .login => |login| {
-            //     if (!self.onLogin(io, login)) {
-            //         self.sendTextMessage("username or password is invalid", .{}) catch {
-            //             logger.err("failed to respond", .{});
-            //         };
-            //         self.callChangeState(.Invalid);
-            //         return;
-            //     }
-
-            //     self.callChangeState(.Connected);
-            // },
-            // .ping => {},
-            // .charCreate => |req| {
-            //     logger.debug("create new char: {s} class: {s}", .{ req.name, @tagName(req.class) });
-            //     if (!self.onCreateCharacter(io, req)) {
-            //         self.sendTextMessage("failed to delete character", .{}) catch {};
-            //         logger.err("failed to create char", .{});
-            //     }
-            // },
-            // .charDelete => |req| {
-            //     if (!self.onDeleteCharacter(io, req)) {
-            //         self.sendTextMessage("password is invalid", .{}) catch {};
-            //         logger.err("failed to delete char", .{});
-            //     }
-            // },
-            // .enterWorld => |req| {
-            //     self.onEnterWorld(io, req);
-            // },
-            // .pin => |pin| {
-            //     if (self.account.mode == .unset) {
-            //         const pinPassword = Account.PinPassword.fromChar(pin.numeric);
-            //         self.account.pinPassword = pinPassword;
-            //         self.account.mode = .normal;
-            //         if (!self.db.updateAccount(io, &self.account)) {
-            //             self.callChangeState(.Disconnected);
-            //         }
-            //     } else {
-            //         var pinAccount: [6]u8 = undefined;
-            //         self.account.pinPassword.toChars(pinAccount[0..]);
-            //         std.debug.print("{c}{c}-{c}{c}-{c}{c}\n", .{ pinAccount[0], pinAccount[1], pinAccount[2], pinAccount[3], pinAccount[4], pinAccount[5] });
-            //         if (!std.mem.eql(u8, pinAccount[0..], pin.numeric[0..])) {
-            //             self.sendPulse(packets.Opcode.PIN_FAIL) catch {
-            //                 self.callChangeState(.Disconnected);
-            //                 return;
-            //             };
-            //         }
-            //     }
-            // },
-            // .moveItem => |req| {
-            //     self.onMoveItem(io, req);
-            // },
-            // .moviment => |req| {
-            //     self.onAction(req);
-            // },
-            // .unknown => |unk| {
-            //     logger.debug("[{d}] Unknown opcode: {X}", .{ userID, unk.operationCode });
-            // },
-            //}
         }
     }
 

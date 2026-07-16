@@ -19,12 +19,37 @@ server:on("on_whisper", function(peer, req)
                 return
             end
 
+            local mob = char:to_mob()
+            if mob == nil then
+                logger:info("cannot convert to mob " .. peer.peer_id)
+                peer:send_text("invalid code, check the code")
+                return
+            end
+
             char.tab = req.message
-            server:multicast("mob_spawn", {
+
+            local area = tonumber(os.getenv("AREA_MULTICAST"))
+            local rect = {
+                x = char.position.x - area / 2,
+                y = char.position.y - area / 2,
+                width = area,
+                height = area,
+            }
+
+            local opts = {
+                -- remove peer that whiper
+                filter = function(receiver)
+                    return receiver.peer_id ~= peer.peer_id;
+                end,
+            }
+
+            -- sent to all in area
+            server:multicast_command_in_area("mob_spawn", rect, {
                 position = char.position,
                 owner_id = peer.peer_id,
-                mob = char:to_mob(),
-            })
+                mob = mob,
+            }, opts)
+
             account:save(server:get_database())
             peer:send_text("Tab updated to: " .. char.tab)
         end,

@@ -4,10 +4,6 @@ local logger = require("logger")
 server:on("on_create_char", function(peer, req)
     logger:info("iniciando o login")
     local db = server:get_database()
-    if db == nil then
-        peer:send_text("ops.. try again soon")
-        return false
-    end
 
     if (req.name == "root") then
         peer:send_text("nome invalido")
@@ -24,15 +20,14 @@ server:on("on_create_char", function(peer, req)
 
         local full = { index = 43, value = 9 }
         local sets = {
-            [CharacterClass.TK] = 1106,
-            [CharacterClass.FM] = 1253,
-            [CharacterClass.BM] = 1418,
-            [CharacterClass.HT] = 1568,
+            [CharacterClass.TK] = { 1106, 1118, 1130, 1142, 1152 },
+            [CharacterClass.FM] = { 1253, 1265, 1277, 1289, 1301 },
+            [CharacterClass.BM] = { 1418, 1421, 1424, 1427, 1430 },
+            [CharacterClass.HT] = { 1568, 1571, 1574, 1577, 1580 }
         }
 
-        local set = sets[char.class]
-        for i = 1, 5 do
-            char:set_equipment(i, Item.new(set + 12 * (i - 1), full))
+        for i, item in ipairs(sets[char.class]) do
+            char:set_equipment(i, Item.new(item, full))
         end
 
         char:set_equipment(EquipmentSlot.weapon, Item.new(2704, full))
@@ -46,8 +41,8 @@ server:on("on_create_char", function(peer, req)
         char.stats.skills.skill1 = 91
         char.stats.skills.skill2 = 92
         char.stats.skills.skill3 = 93
-        char.stats.state.movement_speed = 10
-        char.current_stats.state.movement_speed = 10
+        char.stats.state.movement_speed = 7
+        char.current_stats.state.movement_speed = 7
         char.stats.str = 100
         char.stats.int = 100
         char.stats.state.pk_level = 10;

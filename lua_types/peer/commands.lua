@@ -1,6 +1,7 @@
 ---@meta
 ---
 
+
 ---@enum MoveKind
 MoveKind = {
     WALK = 0,
@@ -13,17 +14,16 @@ MoveDirection = {
     RIGTH = 4,
 }
 
----@class CharacterSpawnCommand
+
+---@class CharSpawnCommand
 ---@field position Position
 ---@field character Character
-CharacterSpawn = {}
 
 ---command to create
 ---@class MobSpawnCommand
 ---@field position Position
 ---@field owner_id integer
 ---@field mob Mob
-MobSpawn = {}
 
 ---@class MobMoveCommand
 ---@field origin Position
@@ -32,4 +32,3 @@ MobSpawn = {}
 ---@field speed integer (0-15)
 ---@field mob_id integer
 ---@field routes? MoveDirection[] optional
-MobMove = {}

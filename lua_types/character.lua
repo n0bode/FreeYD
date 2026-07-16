@@ -112,6 +112,5 @@ function Character:set_equipment(slot, item) end
 function Character:get_equipment(slot) end
 
 ---Return a mob model from the character class.
----@param peer_id integer The peer ID of the player
 ---@return Mob?
-function Character:to_mob(peer_id) end
+function Character:to_mob() end

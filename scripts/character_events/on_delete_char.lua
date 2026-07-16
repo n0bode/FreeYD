@@ -3,10 +3,6 @@ local logger = require("logger")
 
 server:on("on_delete_char", function(peer, req)
     local db = server:get_database()
-    if db == nil then
-        peer:send_text("ops.. try again soon")
-        return false
-    end
 
     local account = peer.account
     if account == nil then

@@ -16,6 +16,22 @@ server:on("on_mob_move", function(peer, req)
         return
     end
 
+    local area = tonumber(os.getenv("MULTICAST_AREA"))
+    local rect = {
+        x = char.position.x - area / 2,
+        y = char.position.y - area / 2,
+        width = area,
+        height = area,
+    }
+
+    local opts = {
+        -- replace peer_id from server to peer sender
+        peer_id = peer.peer_id,
+        filter = function(receiver)
+            -- ignore o sender
+            return receiver.peer_id ~= peer.peer_id
+        end
+    }
 
     local data = {
         mob_id = peer.peer_id,
@@ -24,16 +40,5 @@ server:on("on_mob_move", function(peer, req)
         speed = req.speed,
         destination = req.destination,
     }
-
-
-    local opts = {
-        -- send time from client
-        time = server:get_time(),
-        peer_id = peer.peer_id,
-        opcode = 0x366,
-    }
-
-    logger:info("sent " .. opts.opcode)
-    -- notification all peers about new char
-    server:multicast("mob_move", data, opts)
+    server:multicast_command_in_area("mob_move", rect, data, opts)
 end)

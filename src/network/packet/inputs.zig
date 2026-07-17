@@ -8,12 +8,13 @@ pub const PacketData = union(OpcodeFromClient) {
     ping,
     login: PacketLoginInput,
     pinPassword: PacketPinPasswordInput,
-    charCreate: PacketCharCreateInput,
-    charDelete: PacketCharDeleteInput,
-    enterWorld: PacketEnterWorldInput,
-    action: PacketActionInput,
+    createChar: PacketCharCreateInput,
+    deleteChar: PacketCharDeleteInput,
+    spawnChar: PacketEnterWorldInput,
+    motionMob: PacketActionInput,
     moveItem: PacketMoveItemInput,
     updateAttribute: PacketUpdateAttribute,
+    chatWhisper: ChatWhisperInput,
 };
 
 // This a Packet abstract union received from Client
@@ -60,12 +61,13 @@ pub const OpcodeFromClient = enum(u16) {
     ping = @intFromEnum(Opcode.PING),
     login = @intFromEnum(Opcode.LOGIN),
     pinPassword = @intFromEnum(Opcode.PIN),
-    charCreate = @intFromEnum(Opcode.CHAR_CREATE),
-    charDelete = @intFromEnum(Opcode.CHAR_DELETE),
-    enterWorld = @intFromEnum(Opcode.CHAR_SELECT),
-    action = @intFromEnum(Opcode.ACTION),
+    createChar = @intFromEnum(Opcode.CHAR_CREATE),
+    deleteChar = @intFromEnum(Opcode.CHAR_DELETE),
+    spawnChar = @intFromEnum(Opcode.CHAR_SPAWN),
+    motionMob = @intFromEnum(Opcode.MOB_MOTION),
     moveItem = @intFromEnum(Opcode.ITEM_MOVE),
     updateAttribute = @intFromEnum(Opcode.SET_ATTRIBUTE),
+    chatWhisper = @intFromEnum(Opcode.MSG_WHISPER),
 
     // parse a u16 code to a struct union with correct data
     pub fn parse(code: u16) OpcodeFromClient {
@@ -78,7 +80,7 @@ pub const OpcodeFromClient = enum(u16) {
     }
 };
 
-pub const StorageType = enum(u8){
+pub const StorageType = enum(u8) {
     INVENTORY = 0,
     EQUIPMENT = 1,
     WAREHOUSE = 2,
@@ -105,7 +107,7 @@ pub const PacketEnterWorldInput = extern struct {
 
 pub const PacketPinPasswordInput = extern struct {
     numeric: [6]u8,
-    _unknown: [10]u8,
+    unk: [14]u8,
 };
 
 pub const PositionData = extern struct {
@@ -114,7 +116,7 @@ pub const PositionData = extern struct {
 };
 
 pub const PacketActionInput = extern struct {
-    position: PositionData,
+    origin: PositionData,
     speed: i32,
     kind: i32,
     destination: PositionData,
@@ -148,6 +150,11 @@ pub const PacketUpdateAttribute = extern struct {
     peerId: u16,
 };
 
+pub const ChatWhisperInput = extern struct {
+    name: [16]u8,
+    message: [100]u8,
+};
+
 const t = std.testing;
 test "PacketFromClient.decode - it should success" {
     const data = "dAANQgXzvP35GfT9b2RZb2hSYWLy8fT5wvQY/SpQZ3CTU2ph8uQMAOjzAPz1/YT9Gv+k/Rjq6P2vPuT7qFFEcPjyRPyu8XT9NvEM/GbxPP368fQA6uX0+vTq9Pv48Rj/IOWU/UbxYP368fT9+urc/fLxzP0=";
@@ -157,7 +164,6 @@ test "PacketFromClient.decode - it should success" {
     try decoder.decode(buffer[0..], data);
 
     const _packet = try PacketInput.decode(buffer[0..]);
-    std.debug.print("opcode = {X} \n", .{_packet.header.operationCode});
     switch (_packet.data) {
         else => try t.expect(false),
         .login => |*login| {

@@ -117,13 +117,11 @@ fn lua__get_equipment(L: *lua.State) i32 {
 
 fn lua__to_mob(L: *lua.State) i32 {
     const self: *domain.Character = mapper.toUserdata(L, 1) orelse {
-        L.pushString("must be a character instance");
+        L.pushNil();
         return 1;
     };
 
-    const peerID = L.checkInteger(2);
-
-    const mob = self.toMob(@intCast(peerID));
+    const mob = self.toMob();
     //heap memory
     const ptr = L.newUserdata(domain.Mob);
     ptr.* = mob;

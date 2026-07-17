@@ -6,6 +6,7 @@
 ---@class Header
 ---@field operationCode integer
 ---@field time integer
+---@field index integer
 
 ---Login packet sent by the client (`PacketLoginInput`).
 ---@class LoginEvent
@@ -20,6 +21,7 @@
 ---@class PinPasswordEvent
 ---@field header    Header header operation from client
 ---@field numeric   string 6-digit PIN sequence
+---@field unk string need
 
 ---Request to create a new character.
 ---@class CharCreateEvent

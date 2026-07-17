@@ -10,12 +10,7 @@ local function signup(db, req)
 end
 
 server:on("on_login", function(peer, req)
-    logger:info("iniciando o login")
     local db = server:get_database()
-    if db == nil then
-        peer:send_text("ops.. try again soon")
-        return false
-    end
 
     local account = db:get_account_by_username(req.username)
     if account then
@@ -33,6 +28,7 @@ server:on("on_login", function(peer, req)
         end
         account:save(db)
         peer:associate(account)
+        peer:send_command("enter_account", "bem vindo ao servidor")
         return true
     end
 
@@ -45,5 +41,7 @@ server:on("on_login", function(peer, req)
     account.state = AccountState.LOGGED
     account:save(db)
     peer:associate(account)
+
+    peer:send_command("enter_account", "bem vindo ao servidor")
     return true
 end)

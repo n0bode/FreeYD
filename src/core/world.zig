@@ -3,15 +3,16 @@ const Allocator = std.mem.Allocator;
 const domains = @import("domains/domains.zig");
 const MobQuadTree = @import("core.zig").MobQuadTree;
 
+const MobPoint = MobQuadTree.Point;
 const Mob = domains.Mob;
 
 pub const World = struct {
     arena: std.heap.ArenaAllocator,
 
     mobsInWorld: MobQuadTree,
-    pub fn init(allocator: Allocator) World {
+    pub fn init(child_allocator: Allocator) World {
         return World{
-            .arena = std.heap.ArenaAllocator.init(allocator),
+            .arena = .init(child_allocator),
             // map size
             .mobsInWorld = MobQuadTree.init(4096),
         };
@@ -22,10 +23,10 @@ pub const World = struct {
         self.arena.deinit();
     }
 
-    pub fn spawnMob(self: *World, x: i16, y: i16, mobBase: *Mob) !*MobQuadTree.Point {
+    pub fn createMob(self: *World, x: i16, y: i16, mobBase: *Mob) !*MobQuadTree.Point {
         const allocator = self.arena.allocator();
 
-        var point = try allocator.create(MobQuadTree.Point);
+        var point = try allocator.create(MobPoint);
         point.x = @intCast(x);
         point.y = @intCast(y);
         point.data = mobBase.*;

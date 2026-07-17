@@ -6,8 +6,8 @@ server:on("on_create_char", function(peer, req)
     local db = server:get_database()
 
     if (req.name == "root") then
-        peer:send_text("nome invalido")
-        return false;
+        peer:send_command("char_create_failed", "nome invalido")
+        return
     end
 
     local account = peer.account
@@ -51,12 +51,13 @@ server:on("on_create_char", function(peer, req)
 
     if err ~= nil then
         logger:error("erro ao criar char: " .. err)
-        peer:send_text(err)
+        peer:send_command("char_create_failed", "failed to create")
         return false
     end
 
+
     -- save creation
     account:save(db)
-
+    peer:send_command("char_created", "character created")
     return true
 end)

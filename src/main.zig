@@ -10,7 +10,9 @@ const Peer = @import("network").Peer;
 const ParseArgs = @import("utils").ParseArgs;
 const FileDB = @import("filedb").FileDB;
 const Account = @import("core").domains.Account;
-const Brain = @import("brain").Logic;
+const serverlogic = @import("serverlogic");
+const ServerLogic = serverlogic.ServerLogic;
+const lua = @import("lua");
 
 var running = std.atomic.Value(bool).init(true);
 
@@ -32,7 +34,10 @@ fn captureSignal() void {
             .flags = 0,
         };
 
+        // INTERRUPT
         posix.sigaction(.INT, &sigConfig, null);
+
+        // SIGTERM
         posix.sigaction(.TERM, &sigConfig, null);
     }
     // TODO: signal for WINDOWS
@@ -74,28 +79,23 @@ pub fn main(init: Init) !void {
         },
     });
 
-    var arena = std.heap.ArenaAllocator.init(init.gpa);
-    defer arena.deinit();
-
-    var database = FileDB.init("dbs");
-    const allocator = arena.allocator();
-
-    const b = try Brain.init(allocator, init.io, database.interface());
-    defer b.deinit();
-
-    try b.loadScripts(init.io);
-
+    // setup signal system
     try args.parse(init.minimal.args.iterate(), &config);
     captureSignal();
 
-    var server: Server = try Server.init(allocator, config.config, .{
-        .onReceivePacket = .{
-            .func = Brain.onReceiveMessage,
-            .userdata = b,
-        },
-    });
+    var arena = std.heap.ArenaAllocator.init(init.gpa);
+    const allocator = arena.allocator();
+    defer arena.deinit();
 
-    b.setServer(&server);
+    var database = FileDB.init("dbs");
+    const L = try lua.State.init(allocator);
+    var server: Server = try Server.init(allocator, config.config);
+
+    var serverLogic = ServerLogic.init(allocator, &server, database.interface(), L);
+    defer serverLogic.deinit();
+
+    server.setOnReceivePeerMessage(serverlogic.onReceiveMessage, &serverLogic);
+    try serverLogic.loadScripts(init.io);
     try server.run(init.io);
 
     logger.info("running server on {s}:{d}\n", .{ config.config.host, config.config.port });

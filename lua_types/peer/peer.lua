@@ -24,7 +24,6 @@ function Peer:associate(account) end
 ---Disconnects the client.
 function Peer:disconnect() end
 
-
 ---@class SendCommandOptions
 ---@field peer_id integer overload peer_id event, used when command from another peer
 
@@ -33,5 +32,10 @@ function Peer:disconnect() end
 ---@overload fun(self: Peer, event: "spawn_mob", data: MobSpawnCommand, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "delete_mob", data: MobDeleteCommand, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "motion_mob", data: MobMotionEvent, opts: SendCommandOptions?) ?string
+---@overload fun(self: Peer, event: "enter_account", message: string?, opts: SendCommandOptions?) ?string
+---@overload fun(self: Peer, event: "password_incorrect", message: string?, opts: SendCommandOptions?) ?string
+---@overload fun(self: Peer, event: "char_created", message: string?, opts: SendCommandOptions?) ?string
+---@overload fun(self: Peer, event: "char_deleted", message: string?, opts: SendCommandOptions?) ?string
+---@overload fun(self: Peer, event: "char_create_failed", message: string?, opts: SendCommandOptions?) ?string
 ---@return string? error message
 function Peer:send_command(event, data) end

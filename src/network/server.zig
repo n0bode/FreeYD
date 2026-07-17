@@ -11,12 +11,7 @@ const Clock = std.Io.Clock;
 
 const PacketInput = @import("packet/packet.zig").PacketInput;
 
-pub const Callbacks = struct {
-    onReceivePacket: ?struct {
-        userdata: *anyopaque,
-        func: *const fn (*anyopaque, peer: *Peer, packet: ?*PacketInput) bool,
-    } = null,
-};
+const ReceivePeerMessageFN = *const fn (*anyopaque, peer: *Peer, packet: ?*PacketInput) bool;
 
 const LinkedList = std.SinglyLinkedList;
 
@@ -53,14 +48,15 @@ pub const Server = struct {
     io: std.Io,
 
     peers: []?*Peer,
-    callbacks: Callbacks,
+
+    fnOnReceivePeerMessage: ?ReceivePeerMessageFN = null,
+    udOnReceivePeerMessage: *anyopaque = undefined,
 
     startedAt: i64 = 0,
 
     pub fn init(
         allocator: Allocator,
         config: ServerConfig,
-        callbacks: Callbacks,
     ) !Server {
         const address = net.IpAddress.parse(config.host, config.port) catch |err| {
             logger.err("host:port({s}:{d}) invalid: {s}", .{ config.host, config.port, @errorName(err) });
@@ -74,7 +70,6 @@ pub const Server = struct {
             .group = .init,
             .allocator = allocator,
             .peers = undefined,
-            .callbacks = callbacks,
             .io = undefined,
         };
 
@@ -87,6 +82,11 @@ pub const Server = struct {
 
     pub fn deinit(self: *Server, io: std.Io) void {
         self.socketServer.?.deinit(io);
+    }
+
+    pub fn setOnReceivePeerMessage(self: *Server, func: ReceivePeerMessageFN, userdata: *anyopaque) void {
+        self.fnOnReceivePeerMessage = func;
+        self.udOnReceivePeerMessage = userdata;
     }
 
     pub fn run(self: *Server, io: std.Io) !void {
@@ -202,9 +202,9 @@ pub const Server = struct {
         return Clock.real.now(self.io);
     }
 
-    pub fn onPeerReceivePacket(self: *Server, peer: *Peer, packet: ?*PacketInput) bool {
-        if (self.callbacks.onReceivePacket) |callback| {
-            return callback.func(callback.userdata, peer, packet);
+    pub fn callPeerReceivePacket(self: *Server, peer: *Peer, packet: ?*PacketInput) bool {
+        if (self.fnOnReceivePeerMessage) |callback| {
+            return callback(self.udOnReceivePeerMessage, peer, packet);
         }
         return true;
     }
@@ -213,18 +213,14 @@ pub const Server = struct {
         logger.info("user({d}): handle event {s}", .{ peer.peerId, @tagName(state) });
         switch (state) {
             .Disconnected => {
-                if (self.callbacks.onReceivePacket) |callback| {
-                    if (peer.state == .Logged) {
-                        _ = callback.func(callback.userdata, peer, null);
-                    }
+                if (self.fnOnReceivePeerMessage) |callback| {
+                    _ = callback(self.udOnReceivePeerMessage, peer, null);
                 }
                 self.clearSlot(peer.peerId);
             },
             .Invalid => {
-                if (self.callbacks.onReceivePacket) |callback| {
-                    if (peer.state == .Logged) {
-                        _ = callback.func(callback.userdata, peer, null);
-                    }
+                if (self.fnOnReceivePeerMessage) |callback| {
+                    _ = callback(self.udOnReceivePeerMessage, peer, null);
                 }
                 self.clearSlot(peer.peerId);
             },

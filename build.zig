@@ -43,9 +43,13 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    const network = b.addModule("network", .{ .root_source_file = b.path("src/network/network.zig"), .target = target, .imports = &.{
-        .{ .name = "core", .module = coreMod },
-    } });
+    const network = b.addModule("network", .{
+        .root_source_file = b.path("src/network/network.zig"),
+        .target = target,
+        .imports = &.{
+            .{ .name = "core", .module = coreMod },
+        },
+    });
 
     const database = b.addModule("database", .{
         .root_source_file = b.path("src/db/database.zig"),
@@ -107,7 +111,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const serverlogic = b.addModule("serverlogic", .{
-        .root_source_file = b.path("src/core/serverlogic/serverlogic.zig"),
+        .root_source_file = b.path("src/serverlogic/serverlogic.zig"),
         .target = target,
         .imports = &.{
             .{ .name = "core", .module = coreMod },
@@ -152,7 +156,8 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "core", .module = coreMod },
                 .{ .name = "db", .module = database },
                 .{ .name = "filedb", .module = fileDB },
-                .{ .name = "brain", .module = serverlogic },
+                .{ .name = "lua", .module = luamodule },
+                .{ .name = "serverlogic", .module = serverlogic },
                 .{ .name = "network", .module = network },
                 .{ .name = "utils", .module = utils },
             },

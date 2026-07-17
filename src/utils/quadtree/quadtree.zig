@@ -74,8 +74,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
         };
 
         root: Node,
-        arena: std.heap.ArenaAllocator,
-        pub fn init(allocator: Allocator, size: u64) Self {
+        pub fn init(size: u64) Self {
             const bound = Rect{
                 .x = 0,
                 .y = 0,
@@ -84,7 +83,6 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
             };
 
             return Self{
-                .arena = std.heap.ArenaAllocator.init(allocator),
                 .root = .init(bound),
             };
         }
@@ -93,8 +91,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
             self.arena.deinit();
         }
 
-        fn subdivide(self: *Self, node: *Node) !void {
-            const allocator = self.arena.allocator();
+        fn subdivide(_: *Self, allocator: Allocator, node: *Node) !void {
             const nodes = try allocator.alloc(Node, 4);
 
             const w2 = node.bounds.width / 2;
@@ -147,7 +144,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
             }
         }
 
-        pub fn insert(self: *Self, pos: *Point) !bool {
+        pub fn insert(self: *Self, allocator: Allocator, pos: *Point) !bool {
             var node = &self.root;
             while (node.bounds.contains(pos)) {
                 if (!node.isFull() and node.lt == null) {
@@ -157,7 +154,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
                 // subidivde
                 if (node.isFull() and node.lt == null) {
                     std.debug.print("subdivide\n", .{});
-                    try self.subdivide(node);
+                    try self.subdivide(allocator, node);
                     std.debug.print("end subdivide\n", .{});
                 }
 

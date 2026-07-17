@@ -103,7 +103,6 @@ pub fn walkGeneratorMTS(comptime T: anytype, L: *State) void {
             const lastDot = std.mem.lastIndexOf(u8, name, ".");
             const enumName = if (lastDot) |idx| name[(idx + 1)..] else name;
 
-            std.debug.print("ENUM = {s}\n", .{enumName});
             L.newTable();
             inline for (std.meta.fields(T)) |field| {
                 L.pushInteger(field.value);
@@ -112,7 +111,6 @@ pub fn walkGeneratorMTS(comptime T: anytype, L: *State) void {
             L.setGlobal(enumName);
         },
         .@"struct" => {
-            std.debug.print("{s}\n", .{@typeName(T)});
             LuaMapperStruct(T).bind(L);
             inline for (std.meta.fields(T)) |field| {
                 switch (@typeInfo(field.type)) {
@@ -141,7 +139,6 @@ pub fn EnumMapper(comptime T: anytype) type {
                     const lastDot = std.mem.lastIndexOf(u8, name, ".");
                     const enumName = if (lastDot) |idx| name[(idx + 1)..] else name;
 
-                    std.log.debug("enum({s})\n", .{enumName});
                     L.newTable();
                     inline for (std.meta.fields(T)) |field| {
                         L.pushInteger(field.value);
@@ -166,7 +163,6 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
     return struct {
         pub const metatableName = "mt_" ++ @typeName(T);
         pub fn bind(L: *State) void {
-            std.debug.print("BIND: {s}\n", .{metatableName});
             _ = L.newMetatable(metatableName);
             L.pushFunction(lua__index);
             L.setField(-2, "__index");
@@ -272,7 +268,6 @@ pub fn LuaMapperStruct(comptime T: anytype) type {
                 const snakeName = toSnakeCase(field.name);
                 if (field.type == void) continue;
                 if (std.mem.eql(u8, keyname, snakeName)) {
-                    std.log.debug("{s}({X}).{s}", .{ @typeName(T), @intFromPtr(&@field(self, field.name)), keyname });
                     switch (@typeInfo(field.type)) {
                         // use pointer instead of struct
                         .@"struct" => {

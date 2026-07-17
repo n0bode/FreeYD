@@ -10,6 +10,7 @@ const PacketInput = network.PacketInput;
 const packets = network.packet.client;
 
 pub const PacketInputBinding = @This();
+pub const HeaderBinding = utils.LuaMapperStruct(network.Header);
 
 pub fn getMetatableName() []const u8 {
     return "mt_" ++ @typeName(PacketInput);
@@ -37,6 +38,7 @@ pub fn bind(L: *lua.State) void {
     L.setField(-2, "__index");
     L.pop(1);
 
+    HeaderBinding.bind(L);
     inline for (std.meta.fields(packets.PacketData)) |packetType| {
         walkGeneratorMTS(packetType.type, L);
     }
@@ -58,6 +60,12 @@ fn lua__index(L: *lua.State) i32 {
         L.pushNil();
         return 1;
     };
+
+    // add header
+    if (std.mem.eql(u8, keyName, "header")) {
+        HeaderBinding.newUserdata(L, &self.header);
+        return 1;
+    }
 
     inline for (std.meta.fields(packets.PacketData)) |field| {
         if (field.type == void) continue;

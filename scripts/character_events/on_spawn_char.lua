@@ -38,6 +38,7 @@ server:on("on_spawn_char", function(peer, req)
     end
 
     local area = os.getenv("MULTICAST_AREA")
+    logger:info("area: " .. area);
     local rect = {
         x = char.position.x - area / 2,
         y = char.position.y - area / 2,
@@ -45,6 +46,9 @@ server:on("on_spawn_char", function(peer, req)
         height = area,
     }
 
+    local world = server:get_world()
+
+    world:list_mobs_in_area(rect)
     -- notification all peers about new char
     server:multicast_command_in_area("mob_spawn", rect, {
         position = char.position,

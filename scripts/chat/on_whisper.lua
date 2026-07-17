@@ -1,7 +1,7 @@
 local server = require("server");
 local logger = require("logger");
 
-server:on("on_whisper", function(peer, req)
+server:on("on_chat_whisper", function(peer, req)
     logger:info("(" .. peer.peer_id .. ")[" .. req.name .. "]: " .. req.message)
 
     local actions = {

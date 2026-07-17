@@ -1,7 +1,7 @@
 local server = require("server")
 local logger = require("logger")
 
-server:on("on_mob_move", function(peer, req)
+server:on("on_motion_mob", function(peer, req)
     local position = req.origin
     logger:info("source(" .. position.x .. "," .. req.origin.y .. ")")
     logger:info("kind: " .. req.kind .. " speed " .. req.speed)

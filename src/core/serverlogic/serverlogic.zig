@@ -48,45 +48,7 @@ pub const Logic = struct {
         return self;
     }
 
-    fn bindingLua(self: *Logic) void {
-        const L = self.L;
-
-        bindings.AccountBinding.bind(L);
-        bindings.CharacterBinding.bind(L);
-        bindings.PacketBinder.bind(L);
-        bindings.DatabaseBinding.bind(L);
-        bindings.PeerBinding.bind(L);
-        bindings.MobBinding.bind(L);
-        ServerBinding.bind(self);
-    }
-
-    pub fn setServer(self: *Logic, server: *network.Server) void {
-        self.server = server;
-    }
-
-    pub fn loadScripts(self: *Logic, io: std.Io) !void {
-        const allocator = self.arena.allocator();
-
-        var dir = try cwd.openDir(io, "./scripts", .{ .iterate = true });
-        defer dir.close(io);
-
-        var walk = try dir.walk(allocator);
-        defer walk.deinit();
-
-        var buffer = std.mem.zeroes([2048]u8);
-        while (try walk.next(io)) |file| {
-            if (file.kind == .file) {
-                if (std.mem.endsWith(u8, file.path, ".lua")) {
-                    const size = try file.dir.realPathFile(io, file.basename, buffer[0..]);
-                    const path = buffer[0..size];
-
-                    try self.L.doFile(path);
-                }
-            }
-        }
-    }
-
-    pub fn bindEvent(self: *Logic, name: []const u8, fnRegIdx: i32) !void {
+        pub fn bindEvent(self: *Logic, name: []const u8, fnRegIdx: i32) !void {
         const allocator = self.arena.allocator();
         if (!self.events.contains(name)) {
             const owned_name = try allocator.dupe(u8, name);
@@ -139,70 +101,6 @@ pub const Logic = struct {
         return true;
     }
 
-    pub fn onReceivePacket(
-        self: *Logic,
-        peer: *network.Peer,
-        message: ?*network.PacketInput,
-    ) bool {
-        if (message == null) {
-            //disconnected
-            _ = self.callEvent("on_disconnected", peer, null);
-            return true;
-        }
-
-        switch (message.?.data) {
-            .login => {
-                return self.respondLogin(
-                    peer,
-                    self.callEvent("on_login", peer, message),
-                );
-            },
-            .pinPassword => {
-                return self.respondPin(
-                    peer,
-                    self.callEvent("on_pinpassword", peer, message),
-                );
-            },
-            .charCreate => {
-                return self.respondCharCreate(
-                    peer,
-                    self.callEvent("on_create_char", peer, message),
-                );
-            },
-            .charDelete => {
-                return self.respondCharDelete(
-                    peer,
-                    self.callEvent("on_delete_char", peer, message),
-                );
-            },
-            .enterWorld => {
-                return self.respondEnterWorld(
-                    peer,
-                    self.callEvent("on_spawn_char", peer, message),
-                );
-            },
-            .updateAttribute => {
-                return self.respondUpdateAttribute(
-                    peer,
-                    self.callEvent("on_update_attributes", peer, message),
-                );
-            },
-            .action => {
-                // TODO: how to do send all information to all
-                return self.respondAction(
-                    peer,
-                    self.callEvent("on_mob_move", peer, message),
-                );
-            },
-            .chatWhisper => {
-                _ = self.callEvent("on_whisper", peer, message);
-                return true;
-            },
-            else => {},
-        }
-        return true;
-    }
-
     pub fn deinit(self: *Logic) void {
         const allocator = self.arena.child_allocator;
         defer self.L.deinit();
@@ -210,14 +108,6 @@ pub const Logic = struct {
         defer self.arena.deinit();
     }
 
-    pub fn onReceiveMessage(
-        ptr: *anyopaque,
-        peer: *network.Peer,
-        message: ?*network.PacketInput,
-    ) bool {
-        const self: *Logic = @ptrCast(@alignCast(ptr));
-        return self.onReceivePacket(peer, message);
-    }
 
     // comands
     fn respondLogin(_: *Logic, peer: *network.Peer, result: bool) bool {
@@ -250,17 +140,7 @@ pub const Logic = struct {
                 return false;
             };
         } else {
-            var pack = responses.PacketCharCreateOutput{
-                .header = .{
-                    .operationCode = @intFromEnum(Opcode.CHAR_CREATED),
-                    .time = std.time.epoch.unix,
-                },
-                .characters = .from(&peer.account),
-            };
-
-            peer.sendPacket(&pack) catch {
-                return false;
-            };
+            
         }
         return true;
     }

@@ -1,7 +1,7 @@
 const domain = @import("packet.zig").domains;
 const std = @import("std");
 
-const Header = @import("packet.zig").Header;
+pub const Header = @import("packet.zig").Header;
 const Opcode = @import("packet.zig").Opcode;
 const crypto = @import("crypto.zig");
 
@@ -13,7 +13,7 @@ const crypto = @import("crypto.zig");
 pub const OpcodeToClient = enum(u16) {
     charCreated = @intFromEnum(Opcode.CHAR_CREATED),
     charDeleted = @intFromEnum(Opcode.CHAR_DELETED),
-    charSpawn = @intFromEnum(Opcode.CHAR_SELECTED),
+    charSpawn = @intFromEnum(Opcode.CHAR_SPAWNED),
     itemCreate = @intFromEnum(Opcode.ITEM_CREATE),
     messageText = @intFromEnum(Opcode.TEXTMESSAGE),
     enterAccount = @intFromEnum(Opcode.CHAR_LIST),
@@ -22,7 +22,7 @@ pub const OpcodeToClient = enum(u16) {
 pub const PacketData = union(OpcodeToClient) {
     charCreated: PacketCharCreateOuput,
     charDeleted: PacketCharDeleteOutput,
-    charSpawn: PacketCharSpawn,
+    charSpawn: PacketCharSpawnOutput,
     itemCreate: PacketItemCreateOutput,
     messageText: PacketMessageTextOutput,
 };
@@ -383,14 +383,13 @@ pub const CharacterData = extern struct {
     }
 };
 
-pub const PacketCharSpawn = extern struct {
+pub const PacketCharSpawnOutput = extern struct {
     header: Header,
     position: PositionData,
     character: CharacterData,
 };
 
 pub const MobData = extern struct {
-    mobId: u16,
     name: [12]u8,
     pkLevel: u8,
     currentKill: u8,
@@ -406,7 +405,6 @@ pub const MobData = extern struct {
 
     pub fn from(mob: *domain.Mob) MobData {
         var self = MobData{
-            .mobId = mob.mobId,
             .name = mob.name[0..12].*,
             .pkLevel = mob.pkLevel,
             .currentKill = mob.currentKill,
@@ -431,6 +429,7 @@ pub const MobData = extern struct {
 pub const PacketSpawnOutput = extern struct {
     header: Header,
     position: PositionData,
+    ownerId: u16,
     mob: MobData,
 };
 
@@ -462,4 +461,25 @@ pub const PacketUpdateStats = extern struct {
     mp: i32,
     magic: i32,
     skills: u32,
+};
+
+// struct MSG_Action {
+//  _MSG;
+//
+//  short PosX, PosY;
+//
+//  int Effect; // 0 = walking, 1 = teleporting
+//  int Speed;
+//
+//  char Route[MAX_ROUTE];
+//
+//  short TargetX, TargetY;
+//};
+pub const PacketMobMoveOutput = extern struct {
+    header: Header,
+    origin: PositionData,
+    speed: u32,
+    kind: u32,
+    destination: PositionData,
+    route: [24]i8 = [_]i8{0} ** 24,
 };

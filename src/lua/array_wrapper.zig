@@ -118,7 +118,6 @@ fn lua__index(L: *State) i32 {
             }
 
             const ptr = L.newUserdata(*anyopaque);
-            std.debug.print("origem ptr = {X} opaque = {X}\n", .{ @intFromPtr(element.ptr), @intFromPtr(ptr) });
             ptr.* = @ptrCast(element.ptr);
             L.getMetatableByName(raw.mtName);
             _ = L.setMetatable(-2);
@@ -192,20 +191,17 @@ test "create - array" {
                 },
                 .String => {
                     std.testing.expectEqualStrings(LL.toString(2), LL.toString(1)) catch {
-                        std.debug.print("nao sao igauis", .{});
                         _ = LL.panic("not equal");
                         return 0;
                     };
                 },
                 .Number => {
                     std.testing.expectApproxEqAbs(LL.toNumber(2), LL.toNumber(1), 1e-4) catch {
-                        std.debug.print("expected({any}, {any})\n", .{ LL.toNumber(1), LL.toNumber(2) });
                         _ = LL.panic("not equal");
                         return 0;
                     };
                 },
                 else => {
-                    std.debug.print("not mapped\n", .{});
                     _ = LL.panic("f");
                 },
             }

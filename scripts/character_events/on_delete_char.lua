@@ -5,11 +5,6 @@ server:on("on_delete_char", function(peer, req)
     local db = server:get_database()
 
     local account = peer.account
-    if account == nil then
-        peer:send_text("username or password is invalid")
-        return false
-    end
-
     if account.password ~= req.password then
         peer:send_text("password not matched")
         return false
@@ -21,7 +16,6 @@ server:on("on_delete_char", function(peer, req)
     end
 
     if char.name ~= req.name then
-        logger:error("name character incorrect")
         peer:send_text("failed to delete, try again soon")
         return false
     end
@@ -31,6 +25,6 @@ server:on("on_delete_char", function(peer, req)
 
     logger:info("char nome " .. char.name .. " db = " .. updated.name)
     account:save(db)
-    peer:send_text("character deleted successfully")
+    peer:send_command("char_deleted", "character deleted")
     return true
 end)

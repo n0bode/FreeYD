@@ -121,9 +121,9 @@ pub const Character = extern struct {
         return self;
     }
 
-    pub fn toMob(self: *Character, userId: u16) domain.Mob {
+    pub fn toMob(self: *Character) domain.Mob {
         var mob = domain.Mob{
-            .mobId = userId,
+            .mobId = 0,
             .name = self.name,
             .pkLevel = self.pkLevel,
             .currentKill = self.currentKill,

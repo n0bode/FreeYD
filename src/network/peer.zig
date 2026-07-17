@@ -107,9 +107,11 @@ pub const Peer = struct {
                 .operationCode = @intFromEnum(Opcode.TEXTMESSAGE),
             },
         };
+
         const min = @min(packet.text.len, text.len);
         @memcpy(packet.text[0..min], text[0..min]);
-        try self.sendPacket(&packet);
+        const data = encode(&packet);
+        try self.sendRawPacket(data);
     }
 
     pub fn sendRawPacket(self: *Peer, data: []u8) !void {
@@ -186,7 +188,7 @@ pub const Peer = struct {
             });
 
             self.lastReceiveTime = @intCast(self.getTime());
-            if (!self.server.onPeerReceivePacket(self, &packetDecoded)) {
+            if (!self.server.callPeerReceivePacket(self, &packetDecoded)) {
                 logger.info("peer disconnected by packet execution failed", .{});
                 self.changeState(.Disconnected);
             }

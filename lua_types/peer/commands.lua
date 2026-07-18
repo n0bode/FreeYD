@@ -25,7 +25,7 @@ MoveDirection = {
 ---@field owner_id integer
 ---@field mob Mob
 
----@class MobMoveCommand
+---@class MobMotionCommand
 ---@field origin Position
 ---@field destination Position
 ---@field kind MoveKind

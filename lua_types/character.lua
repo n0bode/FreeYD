@@ -112,5 +112,5 @@ function Character:set_equipment(slot, item) end
 function Character:get_equipment(slot) end
 
 ---Return a mob model from the character class.
----@return Mob?
+---@return Mob
 function Character:to_mob() end

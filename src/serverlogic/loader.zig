@@ -26,6 +26,7 @@ pub fn loadScripts(
                 const size = try file.dir.realPathFile(io, file.basename, buffer[0..]);
                 const path = buffer[0..size];
 
+                std.log.debug("LOADING FILE: {s}", .{path});
                 try L.doFile(path);
             }
         }

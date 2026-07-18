@@ -300,6 +300,10 @@ pub const State = struct {
         c.lua_rawgeti(self.L, c.LUA_REGISTRYINDEX, regId);
     }
 
+    pub fn removeRegistry(self: State, regId: i32) void {
+        c.luaL_unref(self.L, c.LUA_REGISTRYINDEX, regId);
+    }
+
     pub fn getMetatableByName(self: State, name: []const u8) void {
         self.getField(c.LUA_REGISTRYINDEX, name);
     }
@@ -444,6 +448,37 @@ pub const State = struct {
             },
             .@"enum" => {
                 self.pushInteger(@intFromEnum(data));
+            },
+            .optional => |opt| {
+                if (data == null) self.pushNil();
+
+                switch (@typeInfo(opt.child)) {
+                    .@"struct" => {
+                        // more eficient
+                        const mtName = "mt_" ++ @typeName(opt.child);
+                        if (self.hasMetatable(mtName)) {
+                            const ptr = self.newUserdata(T);
+                            ptr.* = data;
+                            self.getMetatableByName(mtName);
+                            self.checkType(-1, .Table);
+                            _ = self.setMetatable(-2);
+                        } else {
+                            self.pushNil();
+                        }
+                    },
+                    // *[N]T: pass the slice pointing to the actual array in memory
+                    .array => |arr| {
+                        if (arr.child == u8) {
+                            self.pushString(std.mem.sliceTo(data[0..], 0));
+                        } else {
+                            ArrayWrapper.pushArray(arr.child, data[0..], self);
+                        }
+                    },
+                    else => {
+                        // recursive
+                        self.pushAny(opt.child, data.?);
+                    },
+                }
             },
             else => {
                 @compileError("unsupported type: " ++ @typeName(T));

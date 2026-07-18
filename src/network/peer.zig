@@ -1,7 +1,8 @@
 const std = @import("std");
 const brain = @import("brain");
 
-const domain = @import("core").domains;
+const core = @import("core");
+const domain = core.domains;
 const Server = @import("server.zig").Server;
 
 const Header = @import("packet/packet.zig").Header;
@@ -36,9 +37,7 @@ pub const Peer = struct {
     };
 
     pub const PlayerState = struct {
-        positionX: i16 = 0,
-        positionY: i16 = 0,
-        charSelected: i8 = 0,
+        mob: core.SpawnedMob,
     };
 
     peerId: u32,
@@ -52,7 +51,7 @@ pub const Peer = struct {
     writer: net.Stream.Writer = undefined,
 
     account: Account = undefined,
-    playerState: PlayerState = .{},
+    playerState: ?PlayerState = undefined,
     server: *Server,
 
     lastReceiveTime: u64 = 0,

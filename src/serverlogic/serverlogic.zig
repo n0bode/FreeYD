@@ -11,6 +11,7 @@ const Allocator = std.mem.Allocator;
 const Dispatcher = @import("dispatcher.zig").Dispatcher;
 const ServerBinding = @import("server_binding/server_binding.zig").ServerBinding;
 
+const logger = std.log.scoped(.serverlogic);
 pub const ServerLogic = struct {
     arena: std.heap.ArenaAllocator,
     server: *network.Server,
@@ -35,6 +36,41 @@ pub const ServerLogic = struct {
         };
     }
 
+    fn createMobs(self: *ServerLogic) void {
+        var mobTrainer = std.mem.zeroInit(core.domains.Mob, .{
+            .mobId = 1001,
+        });
+
+        const name = "Mamador";
+        @memcpy(mobTrainer.name[0..name.len], name[0..]);
+        mobTrainer.equipments[0] = .{
+            .itemID = 60,
+        };
+        mobTrainer.equipments[1] = .{
+            .itemID = 130,
+        };
+        mobTrainer.equipments[2] = .{
+            .itemID = 126,
+        };
+        mobTrainer.equipments[3] = .{
+            .itemID = 127,
+        };
+        mobTrainer.equipments[4] = .{
+            .itemID = 128,
+        };
+        mobTrainer.equipments[5] = .{
+            .itemID = 129,
+        };
+        mobTrainer.equipments[6] = .{
+            .itemID = 986,
+        };
+
+        _ = self.world.createMob(2124, 2042, &mobTrainer) catch {
+            logger.err("failed to create mob", .{});
+            return;
+        };
+    }
+
     pub fn deinit(self: ServerLogic) void {
         self.arena.deinit();
     }
@@ -49,6 +85,7 @@ pub const ServerLogic = struct {
 
     pub fn loadScripts(self: *ServerLogic, io: std.Io) !void {
         self.bindLuaTypes();
+        self.createMobs();
         try loader.loadScripts(self.arena.allocator(), io, self.state);
     }
 
@@ -59,6 +96,7 @@ pub const ServerLogic = struct {
         bindings.DatabaseBinding.bind(self.state);
         bindings.PeerBinding.bind(self.state);
         bindings.MobBinding.bind(self.state);
+        bindings.WorldBinding.bind(self.state);
         ServerBinding.bind(self);
     }
 };

@@ -42,6 +42,7 @@ server:on("on_login", function(peer, req)
     account:save(db)
     peer:associate(account)
 
+
     peer:send_command("enter_account", "bem vindo ao servidor")
     return true
 end)

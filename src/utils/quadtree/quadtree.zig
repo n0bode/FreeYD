@@ -9,7 +9,16 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
         pub const Point = struct {
             x: i64,
             y: i64,
+
             data: T,
+            node: ?*Node = null,
+
+            pub fn remove(self: *Point) bool {
+                if (self.node) |node| {
+                    return node.remove(self);
+                }
+                return false;
+            }
         };
 
         pub const Rect = struct {
@@ -62,11 +71,19 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
                 return self.items.len >= capacity;
             }
 
+            pub fn remove(self: *Node, point: *Point) bool {
+                self.items.remove(point) catch {
+                    return false;
+                };
+                return true;
+            }
+
             pub fn push(self: *Node, pos: *Point) bool {
                 if (!self.bounds.contains(pos)) return false;
                 self.items.push(pos) catch {
                     return false;
                 };
+                pos.node = self;
 
                 std.debug.print("Point({d}, {d}), inserted at: ({d},{d})[{d}, {d}]\n", .{ pos.x, pos.y, self.bounds.x, self.bounds.y, self.bounds.width, self.bounds.height });
                 return true;
@@ -153,9 +170,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
 
                 // subidivde
                 if (node.isFull() and node.lt == null) {
-                    std.debug.print("subdivide\n", .{});
                     try self.subdivide(allocator, node);
-                    std.debug.print("end subdivide\n", .{});
                 }
 
                 const nodes = [_]?*Node{ node.lt, node.rb, node.rt, node.lb };
@@ -242,16 +257,8 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
             return arr;
         }
 
-        pub fn remove(self: *Self, pos: *Point) bool {
-            var rect = Rect{
-                .x = pos.x,
-                .y = pos.y,
-                .width = 0,
-                .height = 0,
-            };
-
-            // exclusive = walk until found and remove, then stop
-            return self.searchDeep(&rect, &self.root, true, pos, fnRemoveFound);
+        pub fn remove(_: *Self, pos: *Point) bool {
+            return pos.remove();
         }
 
         pub fn countInArea(self: *Self, rect: Rect) usize {

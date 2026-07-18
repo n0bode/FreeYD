@@ -31,28 +31,41 @@ server:on("on_spawn_char", function(peer, req)
         return
     end
 
-    local player_mob = char:to_mob()
-    if player_mob == nil then
-        logger:error("Failed to convert character to mob for peer " .. peer.peer_id)
-        return
-    end
-
-    local area = os.getenv("MULTICAST_AREA")
-    logger:info("area: " .. area);
-    local rect = {
-        x = char.position.x - area / 2,
-        y = char.position.y - area / 2,
-        width = area,
-        height = area,
-    }
+    local max_players = tonumber(os.getenv("MAX_PLAYERS"))
+    local player_mob = peer:get_player_mob()
 
     local world = server:get_world()
+    world:move_mob(player_mob, player_mob.x, player_mob.y)
+    world:each_mobs(function(mob)
+        -- owns server
+        local owner_id = 0x7530
 
-    world:list_mobs_in_area(rect)
-    -- notification all peers about new char
-    server:multicast_command_in_area("mob_spawn", rect, {
-        position = char.position,
-        owner_id = peer.peer_id,
-        mob = player_mob,
-    })
+        local mob_id = mob.data.mob_id
+        logger:info("mob_id " .. mob_id)
+        local is_player = mob_id <= max_players
+        local is_mine = mob_id == peer.peer_id
+
+        if (is_player) then
+            owner_id = mob_id
+
+            -- notify near players
+            if not (is_mine) then
+                local another = server:get_peer(owner_id)
+                if (another) then
+                    another:send_command("spawn_mob", {
+                        position = char.position,
+                        owner_id = peer.peer_id,
+                        mob = player_mob.data,
+                    })
+                end
+            end
+        end
+
+        logger:info("(" .. mob.x .. "," .. mob.y .. ") = " .. mob.data.mob_id .. "|" .. mob.data.name)
+        peer:send_command("spawn_mob", {
+            position = { x = mob.x, y = mob.y },
+            owner_id = owner_id,
+            mob = mob.data,
+        })
+    end)
 end)

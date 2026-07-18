@@ -6,8 +6,10 @@ const network = binding.network;
 
 const Peer = network.Peer;
 const Account = binding.domain.Account;
+const Character = binding.domain.Character;
 const PeerCommands = @import("peer_commands.zig");
 const AccountBinding = binding.AccountBinding;
+const SpawnedMobBinding = binding.SpawnedMobBinding;
 const Indexer = @import("../utils.zig").IndexerField;
 
 pub const PeerBinding = @This();
@@ -61,6 +63,14 @@ pub fn bind(L: *State) void {
                 },
             },
         },
+        .{
+            .name = "get_player_mob",
+            .value = .{
+                .func = .{
+                    .func = lua__get_player_mob,
+                },
+            },
+        },
     });
     L.pushFunction(lua__index);
     L.setField(-2, "__index");
@@ -99,6 +109,33 @@ fn lua_disconnect(L: *State) i32 {
     }).*;
     peer.disconnect();
     return 0;
+}
+
+fn lua__get_player_mob(L: *State) i32 {
+    const peer: *Peer = (L.toUserdata(*Peer, 1) orelse return {
+        return 0;
+    }).*;
+
+    const account = peer.account;
+    var char: *Character = @constCast(&account.characters[@intCast(account.charSelected)]);
+
+    if (peer.playerState == null) {
+        var mob = char.toMob();
+        mob.mobId = @intCast(peer.peerId);
+
+        peer.playerState = .{
+            .mob = .{
+                .x = char.position.x,
+                .y = char.position.y,
+                .data = mob,
+            },
+        };
+    }
+
+    if (peer.playerState) |*state| {
+        SpawnedMobBinding.newUserdata(L, &state.mob);
+    }
+    return 1;
 }
 
 fn lua__index(L: *State) i32 {

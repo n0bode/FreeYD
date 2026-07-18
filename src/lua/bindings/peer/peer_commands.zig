@@ -9,6 +9,7 @@ const builders = network.builders;
 const PositionBinding = binding.PositionBinding;
 const CharacterBinding = binding.CharacterBinding;
 const MobBinding = binding.MobBinding;
+const Position = binding.domain.Position;
 
 const responses = network.responses;
 const Opcode = network.Opcode;
@@ -16,9 +17,9 @@ const Opcode = network.Opcode;
 const CommandFN = *const fn (*Peer, *State) void;
 
 const funcs = std.StaticStringMap(CommandFN).initComptime(&.{
-    .{ "char_spawn", charSpawn },
-    .{ "mob_spawn", mobSpawn },
-    .{ "mob_move", mobMove },
+    .{ "spawn_char", charSpawn },
+    .{ "spawn_mob", mobSpawn },
+    .{ "motion_mob", mobMove },
     .{ "enter_account", enterAccount },
     .{ "password_incorrect", passwordIncorrect },
     .{ "char_created", charCreated },
@@ -32,12 +33,30 @@ pub fn dispatch(peer: *Peer, command: []const u8, L: *State) bool {
     return true;
 }
 
+fn toPosition(L: *State, idx: i32) ?Position {
+    if (L.getLuaType(idx) == .Table) {
+        L.pushValue(idx);
+        L.getField(-1, "x");
+        L.checkType(-1, .Number);
+        L.getField(-2, "y");
+        L.checkType(-1, .Number);
+        return .{
+            .x = @intCast(L.toInteger(-2)),
+            .y = @intCast(L.toInteger(-1)),
+        };
+    }
+
+    return (PositionBinding.toUserdata(L, idx) orelse {
+        return null;
+    }).*;
+}
+
 fn charSpawn(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
 
     L.getField(3, "position");
-    const position = PositionBinding.toUserdata(L, -1) orelse {
-        _ = L.throw("spawn_char: 'position' must be a Position instance");
+    var position = toPosition(L, -1) orelse {
+        _ = L.throw("spawn_char: 'position' must be a Position or table");
         return;
     };
 
@@ -49,7 +68,7 @@ fn charSpawn(peer: *Peer, L: *State) void {
 
     var data = builders.buildSpawnChar(
         @intCast(peer.peerId),
-        position,
+        &position,
         char,
     );
 
@@ -64,8 +83,8 @@ fn mobSpawn(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
 
     L.getField(3, "position");
-    const pos = PositionBinding.toUserdata(L, -1) orelse {
-        _ = L.throw("mob_spawn: 'position' must be a Position instance");
+    var pos = toPosition(L, -1) orelse {
+        _ = L.throw("mob_spawn: 'position' must be a Position instance or table");
         return;
     };
 
@@ -78,7 +97,7 @@ fn mobSpawn(peer: *Peer, L: *State) void {
         return;
     };
 
-    var packet = builders.buildSpawnMob(pos, @intCast(ownerId), mob);
+    var packet = builders.buildSpawnMob(&pos, @intCast(ownerId), mob);
     injectOptions(L, &packet.header);
     peer.sendPacket(&packet) catch {};
 }
@@ -87,7 +106,7 @@ fn mobMove(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
 
     L.getField(3, "origin");
-    const origin = PositionBinding.toUserdata(L, -1) orelse {
+    var origin = toPosition(L, -1) orelse {
         _ = L.throw("mob_move: 'origin' must be a Position instance");
         return;
     };
@@ -109,7 +128,7 @@ fn mobMove(peer: *Peer, L: *State) void {
 
     var packet = builders.buildMotionMob(
         @intCast(mobId),
-        origin,
+        &origin,
         dest,
         @intCast(kind),
         @intCast(speed),
@@ -127,19 +146,19 @@ fn mobMove(peer: *Peer, L: *State) void {
 }
 
 fn enterAccount(peer: *Peer, L: *State) void {
-    if (L.getLuaType(3) == .String) {
-        const message = L.toString(3);
-        peer.sendTextMessage(message) catch {
-            return;
-        };
-    }
-
     const Respond = network.responses.PacketCharListOutput;
     var packet: Respond = .from(&peer.account, .enterAccount);
     peer.sendPacket(&packet) catch {
         L.pushString("failed to send");
         return;
     };
+
+    if (L.getLuaType(3) == .String) {
+        const message = L.toString(3);
+        peer.sendTextMessage(message) catch {
+            return;
+        };
+    }
 
     injectOptions(L, &packet.header);
     peer.sendPacket(&packet) catch {};

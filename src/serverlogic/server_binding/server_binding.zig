@@ -67,6 +67,24 @@ pub fn bind(logic: *ServerLogic) void {
                 },
             },
         },
+        .{
+            .name = "get_world",
+            .value = .{
+                .func = .{
+                    .func = lua_get_world,
+                    .userdata = logic,
+                },
+            },
+        },
+        .{
+            .name = "get_peer",
+            .value = .{
+                .func = .{
+                    .func = lua_get_peer,
+                    .userdata = logic,
+                },
+            },
+        },
     });
 }
 
@@ -124,5 +142,31 @@ fn lua_get_local_date(L: *State) i32 {
 
     const date = self.server.getLocalDate();
     L.pushInteger(date.toSeconds());
+    return 1;
+}
+
+fn lua_get_world(L: *State) i32 {
+    const self: *ServerLogic = L.toUserdata(ServerLogic, L.upValueIndex(2)) orelse {
+        L.pushNil();
+        return 1;
+    };
+
+    bindings.WorldBinding.newUserdata(L, &self.world);
+    return 1;
+}
+
+fn lua_get_peer(L: *State) i32 {
+    const self: *ServerLogic = L.toUserdata(ServerLogic, L.upValueIndex(2)) orelse {
+        L.pushNil();
+        return 1;
+    };
+
+    const peerId = L.checkInteger(-1);
+
+    if (self.server.peers[@intCast(peerId)]) |peer| {
+        bindings.PeerBinding.newUserdata(L, peer);
+    } else {
+        L.pushNil();
+    }
     return 1;
 }

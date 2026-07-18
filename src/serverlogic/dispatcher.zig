@@ -26,20 +26,26 @@ const nameEventsMap = std.EnumArray(Opcodes, ?[]const u8).init(.{
 });
 
 pub const Dispatcher = struct {
+    arena: std.heap.ArenaAllocator,
     events: EventMap,
 
     pub fn init(allocator: Allocator) Dispatcher {
         return .{
+            .arena = .init(allocator),
             .events = EventMap.init(allocator),
         };
     }
 
     pub fn deinit(self: Dispatcher) void {
         self.events.deinit();
+        self.arena.deinit();
     }
 
     pub fn bind(self: *Dispatcher, eventName: []const u8, luaRegId: i32) !void {
-        self.events.put(eventName, luaRegId) catch |err| {
+        const allocator = self.arena.allocator();
+        const name = try allocator.dupe(u8, eventName);
+
+        self.events.put(name, luaRegId) catch |err| {
             logger.err("failed to bind event: {s}", .{@errorName(err)});
             return err;
         };

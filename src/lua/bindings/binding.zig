@@ -15,6 +15,8 @@ pub const AccountBinding = @import("account_binding.zig").AccountBinding;
 pub const CharacterBinding = @import("character_binding.zig").CharacterBinding;
 pub const MobBinding = @import("mob_binding.zig").MobBinding;
 pub const PositionBinding = Mapper(domain.Position);
+pub const SpawnedMobBinding = Mapper(core.SpawnedMob);
+pub const WorldBinding = @import("world_binding.zig").WorldBinding;
 
 const testing = @import("std").testing;
 test {

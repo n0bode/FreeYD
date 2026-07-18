@@ -9,36 +9,33 @@ server:on("on_motion_mob", function(peer, req)
     logger:info("time: " .. req.header.time);
     logger:info("route: " .. req.routes);
 
-    local account = peer.account
-    local char = account:get_current_char();
-    if not char then
-        logger:error("Character not found for peer " .. peer.peer_id)
-        return
-    end
 
-    local area = tonumber(os.getenv("MULTICAST_AREA"))
-    local rect = {
-        x = char.position.x - area / 2,
-        y = char.position.y - area / 2,
-        width = area,
-        height = area,
-    }
+    local map = server:get_world()
+    local player_mob = peer:get_player_mob();
+    local last_pos = { x = player_mob.x, y = player_mob.y }
 
-    local opts = {
-        -- replace peer_id from server to peer sender
-        peer_id = peer.peer_id,
-        filter = function(receiver)
-            -- ignore o sender
-            return receiver.peer_id ~= peer.peer_id
+    map:move_mob(player_mob, req.destination.x, req.destination.y)
+
+    local max_players = tonumber(os.getenv("MAX_PLAYERS"))
+    map:each_mobs(function(spawned_mob)
+        local mob = spawned_mob.data
+        local mob_id = mob.mob_id
+        logger:info("mob_id " .. mob.mob_id)
+        local is_player = mob_id <= max_players
+        local is_mine = mob_id == peer.peer_id
+
+        if is_player and not is_mine then
+            local another = server:get_peer(mob.mob_id)
+            if another then
+                another:send_command("motion_mob", {
+                    destination = req.destination,
+                    origin = last_pos,
+                    mob_id = peer.peer_id,
+                    speed = req.speed,
+                    kind = req.kind,
+                    routes = req.routes,
+                })
+            end
         end
-    }
-
-    local data = {
-        mob_id = peer.peer_id,
-        origin = req.origin,
-        kind = req.kind,
-        speed = req.speed,
-        destination = req.destination,
-    }
-    server:multicast_command_in_area("mob_move", rect, data, opts)
+    end)
 end)

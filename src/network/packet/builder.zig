@@ -33,7 +33,7 @@ pub fn buildSpawnMob(
 ) packets.PacketSpawnOutput {
     return packets.PacketSpawnOutput{
         .header = .{
-            .operationCode = @intFromEnum(Opcode.CHAR_SPAWNED),
+            .operationCode = @intFromEnum(Opcode.MOB_CREATE),
             .index = 0,
             .time = 0,
         },

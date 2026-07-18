@@ -3,13 +3,14 @@ const Allocator = std.mem.Allocator;
 const domains = @import("domains/domains.zig");
 const MobQuadTree = @import("core.zig").MobQuadTree;
 
-const MobPoint = MobQuadTree.Point;
+pub const SpawnedMob = MobQuadTree.Point;
 const Mob = domains.Mob;
 
 pub const World = struct {
     arena: std.heap.ArenaAllocator,
 
     mobsInWorld: MobQuadTree,
+
     pub fn init(child_allocator: Allocator) World {
         return World{
             .arena = .init(child_allocator),
@@ -23,15 +24,29 @@ pub const World = struct {
         self.arena.deinit();
     }
 
-    pub fn createMob(self: *World, x: i16, y: i16, mobBase: *Mob) !*MobQuadTree.Point {
+    pub fn moveMob(self: *World, x: i16, y: i16, mobSpawned: *SpawnedMob) !*SpawnedMob {
         const allocator = self.arena.allocator();
 
-        var point = try allocator.create(MobPoint);
+        // remove last position
+        _ = mobSpawned.remove();
+
+        mobSpawned.x = x;
+        mobSpawned.y = y;
+        if (!try self.mobsInWorld.insert(allocator, mobSpawned)) {
+            return error.MobOutOfMap;
+        }
+        return mobSpawned;
+    }
+
+    pub fn createMob(self: *World, x: i16, y: i16, mobBase: *Mob) !*SpawnedMob {
+        const allocator = self.arena.allocator();
+
+        var point = try allocator.create(SpawnedMob);
         point.x = @intCast(x);
         point.y = @intCast(y);
         point.data = mobBase.*;
 
-        if (!try self.mobsInWorld.insert(point)) {
+        if (!try self.mobsInWorld.insert(allocator, point)) {
             allocator.destroy(point);
             return error.MobOutOfMap;
         }

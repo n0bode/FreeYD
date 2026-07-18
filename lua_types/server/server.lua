@@ -16,25 +16,6 @@ local Server = {}
 ---@param handler fun(peer: Peer, req: any) Callback invoked when the event fires
 function Server:on(event, handler) end
 
----@class World
----@field players_count integer number of player current in server
-local World = {}
-
----get all mobs within distance range
----@param position Position
----@param distance integer
-function World:list_mobs_near(position, distance) end
-
----@class MobPosition
----@field position Position
----@field mob Mob
-
----get all mobs within area
----@param area QueryArea
----@param filter? fun(pMob: MobPosition): boolean
----@return Mob[]
-function World:list_mobs_in_area(area, filter) end
-
 ---Returns the database instance.
 ---@return Database
 function Server:get_database() end
@@ -50,6 +31,11 @@ function Server:get_time() end
 ---Returns the database instance.
 ---@return integer timestamp of server in local date
 function Server:get_local_date() end
+
+---Returns the peer instance of peer_id
+---@param peer_id integer unique peer_id
+---@return Peer? timestamp of server in local date
+function Server:get_peer(peer_id) end
 
 ---@class MulticastOptions
 ---@field time? integer Optional timestamp for the multicast event

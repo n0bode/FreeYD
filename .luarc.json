@@ -2,6 +2,9 @@
     "$schema": "https://raw.githubusercontent.com/LuaLS/lua-language-server/master/meta/template/.luarc.schema.json",
     "runtime": {
         "version": "Lua 5.1",
+        "builtin": {
+            "bit": "enable"
+        },
         "path": [
             "?.lua",
             "?/init.lua",

@@ -74,7 +74,15 @@ AttributeSection = {
 ---@field kind        integer Action type
 ---@field routes      integer[]  Raw command data (24 bytes)
 
----@class WhisperEvent
+---@class ChatWhisperEvent
 ---@field header    Header header operation from client
 ---@field name      string  Target character name (up to 16 chars)
 ---@field message   string  Message content (up to 100 chars)
+
+---@class ChatMessageEvent
+---@field header Header
+---@field message string max 108 characters
+
+---@class TeleportEvent
+---@field header Header
+---@field data string

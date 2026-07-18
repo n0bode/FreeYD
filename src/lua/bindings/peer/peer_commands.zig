@@ -118,7 +118,7 @@ fn mobMove(peer: *Peer, L: *State) void {
     const speed = L.checkInteger(-1);
 
     L.getField(3, "destination");
-    const dest = PositionBinding.toUserdata(L, -1) orelse {
+    var dest = toPosition(L, -1) orelse {
         _ = L.throw("mob_move: 'destination' must be a Position instance");
         return;
     };
@@ -129,7 +129,7 @@ fn mobMove(peer: *Peer, L: *State) void {
     var packet = builders.buildMotionMob(
         @intCast(mobId),
         &origin,
-        dest,
+        &dest,
         @intCast(kind),
         @intCast(speed),
     );

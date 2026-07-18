@@ -29,6 +29,8 @@ pub const Opcode = enum(u16) {
     SET_ATTRIBUTE = 0x277,
     UPDATE_STATS = 0x336,
     MSG_WHISPER = 0x334,
+    TELEPORT = 0x290,
+    MSG_CHAT = 0x333,
 };
 
 // important to encrypt and decrypt message from client and to client
@@ -43,6 +45,7 @@ pub const Verifier = extern struct {
 };
 
 // import to know which opcode and packet server must parse
+// size (12)
 pub const Header = extern struct {
     verifier: Verifier = .{},
     // operation code to know packet

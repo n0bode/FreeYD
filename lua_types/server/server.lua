@@ -9,8 +9,10 @@ local Server = {}
 ---@overload fun(self: Server, event: "on_delete_char", handler: fun(peer: Peer, req: CharDeleteEvent): boolean?)
 ---@overload fun(self: Server, event: "on_pinpassword", handler: fun(peer: Peer, req: PinPasswordEvent): boolean?)
 ---@overload fun(self: Server, event: "on_spawn_char",  handler: fun(peer: Peer, req: CharSpawnEvent))
+---@overload fun(self: Server, event: "on_chat_message",  handler: fun(peer: Peer, req: ChatMessageEvent))
+---@overload fun(self: Server, event: "on_chat_whisper",  handler: fun(peer: Peer, req: ChatWhisperEvent))
+---@overload fun(self: Server, event: "on_teleport",  handler: fun(peer: Peer, req: TeleportEvent))
 ---@overload fun(self: Server, event: "on_mob_move",  handler: fun(peer: Peer, req: MobMotionEvent))
----@overload fun(self: Server, event: "on_whisper",  handler: fun(peer: Peer, req: WhisperEvent))
 ---@overload fun(self: Server, event: "on_login", handler: fun(peer: Peer, req: LoginEvent): boolean)
 ---@param event string Event name
 ---@param handler fun(peer: Peer, req: any) Callback invoked when the event fires

@@ -33,12 +33,26 @@ server:on("on_teleport", function(peer, req)
     if pos_to then
         logger:info("teleport from (" .. origin.x .. "," .. origin.y .. ") to (" .. pos_to[1] .. "," .. pos_to[2] .. ")")
         world:move_mob(char, pos_to[1], pos_to[2])
-        peer:send_command("motion_mob", {
-            origin = origin,
-            kind = 1,
-            speed = 0,
-            mob_id = peer.peer_id,
-            destination = { x = pos_to[1], y = pos_to[2] },
-        })
+
+        world:each_mobs(function(mob)
+            local mob_id = mob.data.mob_id
+            local is_player = mob_id <= tonumber(os.getenv("MAX_PLAYERS"))
+
+            if is_player then
+                local npeer = server:get_peer(mob.data.mob_id)
+                if npeer == nil then
+                    logger:error("peer not found for mob_id " .. mob.data.mob_id)
+                    return
+                end
+
+                npeer:send_command("motion_mob", {
+                    origin = origin,
+                    kind = 1,
+                    speed = 0,
+                    mob_id = peer.peer_id,
+                    destination = { x = pos_to[1], y = pos_to[2] },
+                })
+            end
+        end)
     end
 end)

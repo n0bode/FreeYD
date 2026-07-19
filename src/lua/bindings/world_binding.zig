@@ -134,6 +134,10 @@ fn eachMob(ptr: *anyopaque, point: *SpawnedMob) void {
     const L = self.L;
     L.restoreRegistry(self.fnIndex);
     SpawnedMobBinding.newUserdata(L, point);
+    if (L.isNil(-1)){
+        std.log.err("mob is null", .{});
+        return;
+    }
     if (!L.pcall(1, 0)) {
         std.log.err("failed to call eachMob: {s}", .{L.toString(-1)});
         L.pushNil();

@@ -33,7 +33,6 @@ server:on("on_motion_mob", function(peer, req)
                     mob_id = peer.peer_id,
                     speed = req.speed,
                     kind = req.kind,
-                    routes = req.routes,
                 })
             end
         end

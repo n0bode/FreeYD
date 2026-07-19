@@ -207,8 +207,10 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
                         continue;
                     }).*;
 
-                    if (func(userdata, node, iPoint, point) and exclusive) {
-                        return true;
+                    if (rect.contains(point)) {
+                        if (func(userdata, node, iPoint, point) and exclusive) {
+                            return true;
+                        }
                     }
                 }
                 return !exclusive;

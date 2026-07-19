@@ -41,6 +41,12 @@ pub fn bind(L: *lua.State) void {
             },
         },
         .{
+            .name = "each_mobs_in_area",
+            .value = .{
+                .func = .{ .func = lua__each_mobs_in_area },
+            },
+        },
+        .{
             .name = "create_mob",
             .value = .{
                 .func = .{ .func = lua__create_mob },
@@ -134,7 +140,7 @@ fn eachMob(ptr: *anyopaque, point: *SpawnedMob) void {
     const L = self.L;
     L.restoreRegistry(self.fnIndex);
     SpawnedMobBinding.newUserdata(L, point);
-    if (L.isNil(-1)){
+    if (L.isNil(-1)) {
         std.log.err("mob is null", .{});
         return;
     }
@@ -143,4 +149,44 @@ fn eachMob(ptr: *anyopaque, point: *SpawnedMob) void {
         L.pushNil();
         return;
     }
+}
+
+fn lua__each_mobs_in_area(L: *lua.State) i32 {
+    const self: *core.World = mapper.toUserdata(L, 1) orelse {
+        L.pushNil();
+        return 1;
+    };
+
+    L.checkType(2, .Table);
+    L.getField(2, "x");
+    L.checkType(-1, .Number);
+    const x: i64 = @intCast(L.checkInteger(-1));
+
+    L.getField(2, "y");
+    L.checkType(-1, .Number);
+    const y: i64 = @intCast(L.checkInteger(-1));
+
+    L.getField(2, "width");
+    L.checkType(-1, .Number);
+    const width: u64 = @intCast(L.checkInteger(-1));
+
+    L.getField(2, "height");
+    L.checkType(-1, .Number);
+    const height: u64 = @intCast(L.checkInteger(-1));
+
+    L.checkType(3, .Function);
+    var ptr = pFnLua{
+        .L = L,
+        .fnIndex = L.saveRegistry(3),
+    };
+
+    self.mobsInWorld.listInArea(.{
+        .x = x,
+        .y = y,
+        .width = width,
+        .height = height,
+    }, &ptr, eachMob);
+
+    L.removeRegistry(ptr.fnIndex);
+    return 0;
 }

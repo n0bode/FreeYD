@@ -25,6 +25,7 @@ const funcs = std.StaticStringMap(CommandFN).initComptime(&.{
     .{ "char_created", charCreated },
     .{ "char_create_failed", charCreateFailed },
     .{ "char_deleted", charDeleted },
+    .{ "delete_mob", mobDelete },
 });
 
 pub fn dispatch(peer: *Peer, command: []const u8, L: *State) bool {
@@ -213,6 +214,16 @@ fn charDeleted(peer: *Peer, _: *State) void {
         },
         .characters = .from(&peer.account),
     };
+
+    peer.sendPacket(&pack) catch {};
+}
+
+fn mobDelete(peer: *Peer, L: *State) void {
+    L.checkType(3, .Table);
+    L.getField(3, "mob_id");
+    const mobId: u16 = @intCast(L.checkInteger(-1));
+
+    var pack = builders.buildDeleteMob(mobId);
 
     peer.sendPacket(&pack) catch {};
 }

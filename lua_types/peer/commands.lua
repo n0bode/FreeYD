@@ -32,3 +32,6 @@ MoveDirection = {
 ---@field speed integer (0-15)
 ---@field mob_id integer
 ---@field routes? MoveDirection[] optional
+
+---@class MobDeleteCommand
+---@field mob_id integer

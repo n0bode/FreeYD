@@ -3,6 +3,7 @@
 ---@class SpawnedMob
 ---@field x integer position x
 ---@field y integer position x
+---@field position Position
 ---@field data Mob
 
 ---@class World

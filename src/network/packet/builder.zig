@@ -43,6 +43,18 @@ pub fn buildSpawnMob(
     };
 }
 
+pub fn buildDeleteMob(
+    mobId: u16,
+) packets.PacketEmpty {
+    return packets.PacketEmpty{
+        .header = .{
+            .operationCode = @intFromEnum(Opcode.MOB_DELETE),
+            .index = mobId,
+            .time = 0,
+        },
+    };
+}
+
 pub fn buildMotionMob(
     mobId: u16,
     origin: *Position,

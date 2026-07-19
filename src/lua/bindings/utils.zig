@@ -162,6 +162,7 @@ pub fn bindFunctions(L: *State, metatableName: []const u8, fns: []const Reg) voi
 pub fn LuaMapperStruct(comptime T: anytype) type {
     return struct {
         pub const metatableName = "mt_" ++ @typeName(T);
+        pub const Type = T;
         pub fn bind(L: *State) void {
             _ = L.newMetatable(metatableName);
             L.pushFunction(lua__index);

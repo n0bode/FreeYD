@@ -128,13 +128,33 @@ pub const Character = extern struct {
             .pkLevel = self.pkLevel,
             .currentKill = self.currentKill,
             .totalKill = self.totalKill,
-            .equipments = self.equipments,
+            .equipments = [_]domain.MobItem{.{}} ** 16,
             .buffers = [_]domain.Buffer{.{}} ** 16,
+            .anctCode = [_]u8{0} ** 16,
             .guildId = self.guildId,
             .stats = self.currentStats,
             .spawnType = 1,
             .tab = self.tab,
         };
+
+        for (self.equipments, 0..) |item, i| {
+            if (i != @intFromEnum(EquipmentSlot.mount)) {
+                mob.equipments[i] = .from(item);
+            } else {
+                mob.equipments[i] = .fromMount(item);
+            }
+
+            for (item.attributes) |attr| {
+                if (attr.index == 43 and attr.value > 230) {
+                    mob.anctCode[i] = switch (@as(u2, @intCast(attr.value & 3))) {
+                        0 => 0x30,
+                        1 => 0x40,
+                        2 => 0x10,
+                        3 => 0x20,
+                    };
+                }
+            }
+        }
 
         mob.name[12] = 0;
         mob.name[13] = 0;

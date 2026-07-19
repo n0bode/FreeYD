@@ -394,8 +394,8 @@ pub const MobData = extern struct {
     pkLevel: u8,
     currentKill: u8,
     totalKill: u16,
-    equipments: [16]u16,
-    equipmentsAttributes: [16]u16,
+    equipments: [16]MobItem,
+    buffers: [16]u16,
     guildId: u16,
     stats: StatsData,
     spawn: u16,
@@ -404,7 +404,7 @@ pub const MobData = extern struct {
     _0: [4]u8 = [_]u8{0} ** 4,
 
     pub fn from(mob: *domain.Mob) MobData {
-        var self = MobData{
+        return MobData{
             .name = mob.name[0..12].*,
             .pkLevel = mob.pkLevel,
             .currentKill = mob.currentKill,
@@ -412,19 +412,34 @@ pub const MobData = extern struct {
             .guildId = mob.guildId,
             .stats = StatsData.from(mob.stats),
             .spawn = mob.spawnType,
-            .anctCode = [_]u8{0} ** 16,
             .tab = mob.tab,
-            .equipments = [_]u16{0} ** 16,
-            .equipmentsAttributes = [_]u16{0} ** 16,
+            .equipments = @bitCast(mob.equipments),
+            .buffers = [_]u16{0} ** 16,
+            .anctCode = @bitCast(mob.anctCode),
         };
-
-        for (mob.equipments, 0..) |dbEquip, idx| {
-            self.equipments[idx] = dbEquip.itemID;
-            self.equipmentsAttributes[idx] = @bitCast(dbEquip.attributes[0]);
-        }
-        return self;
     }
 };
+
+const MobItem = packed struct(u16) {
+    level: u4,
+    itemId: u12,
+};
+
+fn getItem(item: domain.Item) MobItem {
+    for (item.attributes) |attr| {
+        if (attr.index == 43)
+            return .{
+                .level = attr.value,
+                .itemId = @intCast(item.index & 0xFFF),
+            };
+        if (attr.index >= 116)
+            return .{
+                .level = attr.value,
+                .itemId = @intCast(item.index & 0xFFF),
+            };
+    }
+    return @bitCast(item.itemID);
+}
 
 pub const PacketSpawnOutput = extern struct {
     header: Header,

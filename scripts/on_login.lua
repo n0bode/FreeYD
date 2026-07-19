@@ -35,6 +35,8 @@ server:on("on_login", function(peer, req)
     if account.state ~= AccountState.OFFLINE then
         logger:info("account already logged: " .. req.username)
         peer:send_text("account is already logged in")
+        account.state = AccountState.OFFLINE
+        account:save(db)
         return false
     end
 

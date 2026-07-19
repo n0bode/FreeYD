@@ -10,6 +10,25 @@ server:on("on_chat_whisper", function(peer, req)
             local date = "" .. os.date("!%d-%m-%Y %H:%M:%S", datetime)
             peer:send_text(date)
         end,
+        ["tp"] = function()
+            local args = string.gmatch(req.message, "%S+")
+            local x = tonumber(args()) or 2112
+            local y = tonumber(args()) or 2101
+
+            logger:info("Teleporting peer " .. peer.peer_id .. " to: " .. x .. "," .. y)
+            peer:send_text("Teleporting to: " .. x .. "," .. y)
+            local world = server:get_world()
+            local char = peer:get_player_mob()
+
+            world:move_mob(char, x, y)
+            peer:send_command("motion_mob", {
+                origin = { x = char.x, y = char.y },
+                kind = 1,
+                speed = 0,
+                mob_id = peer.peer_id,
+                destination = { x = x, y = y },
+            })
+        end,
         ["tab"] = function()
             local account = peer.account
             local char = account:get_current_char()

@@ -18,7 +18,7 @@ server:on("on_create_char", function(peer, req)
         char.position.x = 2112
         char.position.y = 2042
 
-        local full = { index = 43, value = 9 }
+        local full = { index = 43, value = 250 }
         local sets = {
             [CharacterClass.TK] = { 1106, 1118, 1130, 1142, 1152 },
             [CharacterClass.FM] = { 1253, 1265, 1277, 1289, 1301 },
@@ -32,7 +32,8 @@ server:on("on_create_char", function(peer, req)
 
         char:set_equipment(EquipmentSlot.weapon, Item.new(2704, full))
         char:set_equipment(EquipmentSlot.shield, Item.new(2704))
-        char:set_equipment(EquipmentSlot.mount, Item.new(2378, full))
+        char:set_equipment(EquipmentSlot.mount,
+            Item.new(2360, { index = 0, value = 20 }, { index = 0, value = 30 }, { index = 0, value = 50 }))
 
         -- TODO: ler de uma tabela ou algo do tipo
         char.skill_points = 255

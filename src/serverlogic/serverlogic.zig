@@ -44,25 +44,25 @@ pub const ServerLogic = struct {
         const name = "Mamador";
         @memcpy(mobTrainer.name[0..name.len], name[0..]);
         mobTrainer.equipments[0] = .{
-            .itemID = 60,
+            .itemId = 60,
         };
         mobTrainer.equipments[1] = .{
-            .itemID = 130,
+            .itemId = 130,
         };
         mobTrainer.equipments[2] = .{
-            .itemID = 126,
+            .itemId = 126,
         };
         mobTrainer.equipments[3] = .{
-            .itemID = 127,
+            .itemId = 127,
         };
         mobTrainer.equipments[4] = .{
-            .itemID = 128,
+            .itemId = 128,
         };
         mobTrainer.equipments[5] = .{
-            .itemID = 129,
+            .itemId = 129,
         };
         mobTrainer.equipments[6] = .{
-            .itemID = 986,
+            .itemId = 986,
         };
 
         _ = self.world.createMob(2124, 2042, &mobTrainer) catch {

@@ -1,26 +1,27 @@
 local server = require("server")
 local logger = require("logger")
-local bit = require("bit")
-local math = require("math")
+local multicast = require("scripts.utils.multicast").multicast
 local rtree = require("rtree")
 
 ---@return Rect
 local function coord(x, y)
-    return { x = x - 3, y = y - 3, w = 6, h = 6 }
+    return { x = x - 4, y = y - 4, w = 8, h = 8 }
 end
 
 local teleports = rtree.new {
-    [coord(1045, 1725)] = { 2118, 2101 },
-    [coord(2118, 2101)] = { 1045, 1725 },
-    [coord(2457, 2018)] = { 1045, 1710 },
-    [coord(1045, 1710)] = { 2457, 2018 },
-    [coord(1045, 1717)] = { 2481, 1717 },
-    [coord(2481, 1717)] = { 1045, 1717 },
-    [coord(2141, 2069)] = { 2597, 2125 },
-    [coord(2669, 2157)] = { 147, 3788 },
-    [coord(147, 3780)]  = { 597, 3770 },
-    [coord(3649, 3109)] = { 1053, 1710 },
-    [coord(1053, 1710)] = { 3649, 3109 },
+    [coord(1045, 1725)] = { x = 2118, y = 2101 },
+    [coord(2118, 2101)] = { x = 1045, y = 1725 },
+    [coord(2457, 2018)] = { x = 1045, y = 1710 },
+    [coord(1045, 1710)] = { x = 2457, y = 2018 },
+    [coord(1045, 1717)] = { x = 2481, y = 1717 },
+    [coord(2481, 1717)] = { x = 1045, y = 1717 },
+    [coord(2141, 2069)] = { x = 2597, y = 2125 },
+    [coord(3649, 3109)] = { x = 1053, y = 1710 },
+    [coord(1053, 1710)] = { x = 3649, y = 3109 },
+    [coord(2669, 2157)] = { x = 0147, y = 3788 },
+    [coord(2365, 2284)] = { x = 0147, y = 3788 },
+    [coord(0147, 3780)] = { x = 0597, y = 3770 },
+    [coord(1313, 1900)] = { x = 2368, y = 4070 },
 }
 
 teleports:query_at(0, 0, function(value)
@@ -35,28 +36,47 @@ server:on("on_teleport", function(peer, req)
     local world = server:get_world()
 
     teleports:query_at(char.x, char.y, function(dest)
-        logger:info("teleport from (" .. origin.x .. "," .. origin.y .. ") to (" .. dest[1] .. "," .. dest[2] .. ")")
-        world:move_mob(char, dest[2], dest[2])
+        logger:info("teleport from (" .. origin.x .. "," .. origin.y .. ") to (" .. dest.x .. "," .. dest.y .. ")")
 
-        world:each_mobs(function(mob)
-            local mob_id = mob.data.mob_id
-            local is_player = mob_id <= tonumber(os.getenv("MAX_PLAYERS"))
+        peer:send_command("motion_mob", {
+            origin = origin,
+            kind = 1,
+            speed = 0,
+            mob_id = peer.peer_id,
+            destination = dest,
+        })
+        multicast(origin, dest, function(another, mob, location)
+            logger:info("send to " .. another.peer_id)
 
-            if is_player then
-                local npeer = server:get_peer(mob.data.mob_id)
-                if npeer == nil then
-                    logger:error("peer not found for mob_id " .. mob.data.mob_id)
-                    return
-                end
+            -- is mine
+            if another.peer_id == peer.peer_id then
+                return
+            end
 
-                npeer:send_command("motion_mob", {
-                    origin = origin,
-                    kind = 1,
-                    speed = 0,
+            if location == 1 then
+                logger:info("delete mob to " .. another.peer_id)
+                another:send_command("delete_mob", {
                     mob_id = peer.peer_id,
-                    destination = { x = dest[1], y = dest[2] },
+                })
+                peer:send_command("delete_mob", {
+                    mob_id = another.peer_id,
+                })
+            end
+
+            if location == 2 then
+                another:send_command("spawn_mob", {
+                    position = dest,
+                    owner_id = peer.peer_id,
+                    mob = char.data,
+                })
+
+                peer:send_command("spawn_mob", {
+                    position = { x = mob.x, y = mob.y },
+                    owner_id = another.peer_id,
+                    mob = mob.data,
                 })
             end
         end)
+        world:move_mob(char, dest.x, dest.y)
     end)
 end)

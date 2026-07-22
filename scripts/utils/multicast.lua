@@ -1,4 +1,5 @@
 local server = require("server")
+local logger = require("logger")
 
 local function contains(area, point)
     return point.x >= area.x and point.x <= area.x + area.width and
@@ -68,6 +69,7 @@ local function multicast(src, dest, func)
             local another_peer = server:get_peer(mob.mob_id)
             if another_peer then
                 local location = location_id(r_dest, r_src, mob_pos)
+                logger:info("teste :" .. mob_id .. " location " .. location)
                 -- outside of both areas, no need to send
                 if location == 3 then
                     return

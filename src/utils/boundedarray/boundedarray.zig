@@ -10,6 +10,18 @@ pub fn BoundedArray(comptime T: type, comptime capacity: usize) type {
             };
         }
 
+        pub fn isFull(self: *@This()) bool {
+            return self.len >= capacity;
+        }
+
+        pub fn toSlice(self: *@This()) []T {
+            return self.items[0..self.len];
+        }
+
+        pub fn clear(self: *@This()) void {
+            self.len = 0;
+        }
+
         pub fn push(self: *BoundedArray(T, capacity), item: T) !void {
             if (self.len >= capacity) {
                 return error.Overflow;

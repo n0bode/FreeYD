@@ -107,6 +107,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "network", .module = network },
             .{ .name = "core", .module = coreMod },
             .{ .name = "database", .module = database },
+            .{ .name = "utils", .module = utils },
         },
     });
 

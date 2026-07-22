@@ -173,6 +173,7 @@ fn lua__each_mobs_in_area(L: *lua.State) i32 {
     L.getField(2, "height");
     L.checkType(-1, .Number);
     const height: u64 = @intCast(L.checkInteger(-1));
+    L.pop(4);
 
     L.checkType(3, .Function);
     var ptr = pFnLua{

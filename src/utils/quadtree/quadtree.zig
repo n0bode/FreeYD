@@ -1,6 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const BoundedArray = @import("boundedarray.zig").BoundedArray;
+const BoundedArray = @import("../utils.zig").BoundedArray;
 
 pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
     return struct {
@@ -85,13 +85,14 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
                 };
                 pos.node = self;
 
-                std.debug.print("Point({d}, {d}), inserted at: ({d},{d})[{d}, {d}]\n", .{ pos.x, pos.y, self.bounds.x, self.bounds.y, self.bounds.width, self.bounds.height });
                 return true;
             }
         };
 
         root: Node,
-        pub fn init(size: u64) Self {
+        arena: std.heap.ArenaAllocator,
+
+        pub fn init(allocator: std.mem.Allocator, size: u64) Self {
             const bound = Rect{
                 .x = 0,
                 .y = 0,
@@ -101,14 +102,16 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
 
             return Self{
                 .root = .init(bound),
+                .arena = .init(allocator),
             };
         }
 
-        pub fn deinit(self: Self) void {
+        pub fn deinit(self: *Self) void {
             self.arena.deinit();
         }
 
-        fn subdivide(_: *Self, allocator: Allocator, node: *Node) !void {
+        fn subdivide(self: *Self, node: *Node) !void {
+            const allocator = self.arena.allocator();
             const nodes = try allocator.alloc(Node, 4);
 
             const w2 = node.bounds.width / 2;
@@ -161,7 +164,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
             }
         }
 
-        pub fn insert(self: *Self, allocator: Allocator, pos: *Point) !bool {
+        pub fn insert(self: *Self, pos: *Point) !bool {
             var node = &self.root;
             while (node.bounds.contains(pos)) {
                 if (!node.isFull() and node.lt == null) {
@@ -170,7 +173,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
 
                 // subidivde
                 if (node.isFull() and node.lt == null) {
-                    try self.subdivide(allocator, node);
+                    try self.subdivide(node);
                 }
 
                 const nodes = [_]?*Node{ node.lt, node.rb, node.rt, node.lb };
@@ -272,7 +275,6 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
         fn fnRemoveFound(ptr: *anyopaque, node: *Node, iPoint: usize, point: *Point) bool {
             const item: *Point = @ptrCast(@alignCast(ptr));
             if (item == point) {
-                std.debug.print("achou {X}: {X}\n", .{ @intFromPtr(item), @intFromPtr(point) });
                 node.items.removeAt(iPoint) catch {
                     return false;
                 };
@@ -365,24 +367,25 @@ test "QuadTree - list" {
     try std.testing.expect(try qt.insert(&point5));
 
     const Case = struct {
-        count: usize = 0,
+        count: i32 = 0,
         area: Q32.Rect,
         expected: []*Q32.Point,
 
         fn assert(self: *@This()) !void {
-            try std.testing.expectEqual(self.expected.len, self.count);
+            try std.testing.expectEqual(self.expected.len, @as(usize, @intCast(self.count)));
         }
     };
 
     const FN = struct {
         pub fn case(ptr: *anyopaque, point: *Q32.Point) void {
             var data: *Case = @ptrCast(@alignCast(ptr));
-            std.debug.print("found point: {d} {d}\n", .{ point.x, point.y });
             for (data.expected) |expec| {
                 if (expec == point) {
                     data.count = data.count + 1;
+                    return;
                 }
             }
+            data.count = data.count - 1;
         }
     };
 
@@ -399,7 +402,7 @@ test "QuadTree - list" {
         },
         // horizontal capture
         .{
-            .area = .{ .x = 0, .y = 0, .width = 74, .height = 25 },
+            .area = .{ .x = 0, .y = 0, .width = 75, .height = 25 },
             .expected = @constCast(&[_]*Q32.Point{ &point1, &point2 }),
         },
     };
@@ -408,7 +411,7 @@ test "QuadTree - list" {
         qt.listInArea(case.area, case, FN.case);
         try case.assert();
 
-        try std.testing.expectEqual(case.count, qt.countInArea(case.area));
+        try std.testing.expectEqual(@as(usize, @intCast(case.count)), qt.countInArea(case.area));
     }
 }
 

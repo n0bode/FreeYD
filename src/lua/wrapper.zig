@@ -281,6 +281,10 @@ pub const State = struct {
         c.luaL_checktype(self.L, @intCast(idx), @intFromEnum(luaType));
     }
 
+    pub fn next(self: State, idx: i32) bool {
+        return c.lua_next(self.L, @intCast(idx)) != 0;
+    }
+
     pub fn newUserdata(self: State, comptime T: anytype) *T {
         return @ptrCast(@alignCast(c.lua_newuserdata(self.L, @sizeOf(T))));
     }

@@ -97,6 +97,7 @@ pub const ServerLogic = struct {
         bindings.PeerBinding.bind(self.state);
         bindings.MobBinding.bind(self.state);
         bindings.WorldBinding.bind(self.state);
+        bindings.RTreeBinding.bind(self.state, self.arena.allocator());
         ServerBinding.bind(self);
     }
 };

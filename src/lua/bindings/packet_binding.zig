@@ -51,6 +51,7 @@ fn lua__index(L: *lua.State) i32 {
     _ = L.getMetatable(1);
     L.getField(-1, keyName);
     if (!L.isNil(-1)) {
+        L.pop(1);
         return 1;
     }
     L.pop(2);

@@ -15,7 +15,7 @@ pub const World = struct {
         return World{
             .arena = .init(child_allocator),
             // map size
-            .mobsInWorld = MobQuadTree.init(4096),
+            .mobsInWorld = MobQuadTree.init(child_allocator, 4096),
         };
     }
 
@@ -25,14 +25,12 @@ pub const World = struct {
     }
 
     pub fn moveMob(self: *World, x: i16, y: i16, mobSpawned: *SpawnedMob) !*SpawnedMob {
-        const allocator = self.arena.allocator();
-
         // remove last position
         _ = mobSpawned.remove();
 
         mobSpawned.x = x;
         mobSpawned.y = y;
-        if (!try self.mobsInWorld.insert(allocator, mobSpawned)) {
+        if (!try self.mobsInWorld.insert(mobSpawned)) {
             return error.MobOutOfMap;
         }
         return mobSpawned;
@@ -46,7 +44,7 @@ pub const World = struct {
         point.y = @intCast(y);
         point.data = mobBase.*;
 
-        if (!try self.mobsInWorld.insert(allocator, point)) {
+        if (!try self.mobsInWorld.insert(point)) {
             allocator.destroy(point);
             return error.MobOutOfMap;
         }

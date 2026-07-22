@@ -46,6 +46,14 @@ server:on("on_motion_mob", function(peer, req)
             mob = player_mob.data,
         })
 
+        another_peer:send_command("motion_mob", {
+            origin = last_pos,
+            kind = req.kind,
+            speed = req.speed,
+            mob_id = peer.peer_id,
+            destination = req.destination,
+        })
+
         peer:send_command("spawn_mob", {
             position = { x = mob.x, y = mob.y },
             owner_id = another_peer.peer_id,

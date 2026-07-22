@@ -1,11 +1,12 @@
 pub const lua = @import("lua");
 pub const network = @import("network");
+pub const utils = @import("utils");
 
 pub const core = @import("core");
 pub const domain = core.domains;
 pub const Database = @import("database").Database;
 
-const Mapper = @import("utils.zig").LuaMapperStruct;
+pub const Mapper = @import("utils.zig").LuaMapperStruct;
 
 pub const PacketBinder = @import("packet_binding.zig").PacketInputBinding;
 pub const PeerBinding = @import("peer/peer_binding.zig").PeerBinding;
@@ -17,6 +18,7 @@ pub const MobBinding = @import("mob_binding.zig").MobBinding;
 pub const PositionBinding = Mapper(domain.Position);
 pub const SpawnedMobBinding = Mapper(core.SpawnedMob);
 pub const WorldBinding = @import("world_binding.zig").WorldBinding;
+pub const RTreeBinding = @import("libs/rtree_binding.zig").RTreeBinding;
 
 const testing = @import("std").testing;
 test {

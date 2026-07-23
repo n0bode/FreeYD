@@ -60,4 +60,13 @@ function Server:get_peer(peer_id) end
 ---@return string error message if the multicast fails
 function Server:multicast_command_in_area(event, area, data, opts) end
 
+---Creates a new NPC in the world.
+---@param npc_info NPCCreateInfo
+function Server:create_npc(npc_info) end
+
+---check if a mob is a player
+---@param mob_id integer unique mob_id
+---@return boolean true if peer is connected, false otherwise
+function Server:is_player(mob_id) end
+
 return Server

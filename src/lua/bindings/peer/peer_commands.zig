@@ -34,38 +34,22 @@ pub fn dispatch(peer: *Peer, command: []const u8, L: *State) bool {
     return true;
 }
 
-fn toPosition(L: *State, idx: i32) ?Position {
-    if (L.getLuaType(idx) == .Table) {
-        L.pushValue(idx);
-        L.getField(-1, "x");
-        L.checkType(-1, .Number);
-        L.getField(-2, "y");
-        L.checkType(-1, .Number);
-        return .{
-            .x = @intCast(L.toInteger(-2)),
-            .y = @intCast(L.toInteger(-1)),
-        };
-    }
-
-    return (PositionBinding.toUserdata(L, idx) orelse {
-        return null;
-    }).*;
-}
-
 fn charSpawn(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
 
     L.getField(3, "position");
-    var position = toPosition(L, -1) orelse {
+    var position = PositionBinding.toUserdata(L, -1) orelse {
         _ = L.throw("spawn_char: 'position' must be a Position or table");
         return;
     };
+    L.pop(1);
 
     L.getField(3, "character");
     const char = CharacterBinding.toUserdata(L, -1) orelse {
         _ = L.throw("spawn_char: 'character' must be a Character instance");
         return;
     };
+    L.pop(1);
 
     var data = builders.buildSpawnChar(
         @intCast(peer.peerId),
@@ -84,19 +68,22 @@ fn mobSpawn(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
 
     L.getField(3, "position");
-    var pos = toPosition(L, -1) orelse {
+    var pos = PositionBinding.toUserdata(L, -1) orelse {
         _ = L.throw("mob_spawn: 'position' must be a Position instance or table");
         return;
     };
+    L.pop(1);
 
     L.getField(3, "owner_id");
     const ownerId = L.checkInteger(-1);
+    L.pop(1);
 
     L.getField(3, "mob");
     const mob = MobBinding.toUserdata(L, -1) orelse {
         _ = L.throw("mob_spawn: 'mob' must be a Mob instance");
         return;
     };
+    L.pop(1);
 
     var packet = builders.buildSpawnMob(&pos, @intCast(ownerId), mob);
     injectOptions(L, &packet.header);
@@ -107,7 +94,7 @@ fn mobMove(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
 
     L.getField(3, "origin");
-    var origin = toPosition(L, -1) orelse {
+    var origin = PositionBinding.toUserdata(L, -1) orelse {
         _ = L.throw("mob_move: 'origin' must be a Position instance");
         return;
     };
@@ -119,7 +106,7 @@ fn mobMove(peer: *Peer, L: *State) void {
     const speed = L.checkInteger(-1);
 
     L.getField(3, "destination");
-    var dest = toPosition(L, -1) orelse {
+    var dest = PositionBinding.toUserdata(L, -1) orelse {
         _ = L.throw("mob_move: 'destination' must be a Position instance");
         return;
     };

@@ -37,7 +37,8 @@ pub const Peer = struct {
     };
 
     pub const PlayerState = struct {
-        mob: core.SpawnedMob,
+        mob: domain.Mob,
+        spawnedMob: core.SpawnedMob,
     };
 
     peerId: u32,

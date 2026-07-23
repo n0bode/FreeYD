@@ -13,6 +13,7 @@
 ---@field stats Stats
 ---@field spawn_type integer
 ---@field tab string text used in game above the mob head
+local Mob = {}
 
 ---@class StatsState
 ---@field merchant integer
@@ -44,3 +45,13 @@
 ---@field fire integer
 ---@field element integer
 ---@field lighting integer
+
+---Sets an equipment item in the given slot.
+---@param slot EquipmentSlot The equipment slot to set
+---@param item Item The item to equip
+function Mob:set_equipment(slot, item) end
+
+---Gets the equipment item in the given slot.
+---@param slot EquipmentSlot The equipment slot to get
+---@return Item?
+function Mob:get_equipment(slot) end

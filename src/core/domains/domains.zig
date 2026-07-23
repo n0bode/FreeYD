@@ -20,3 +20,5 @@ pub const ResitsStats = @import("mob.zig").ResistStats;
 pub const Buffer = @import("mob.zig").Buffer;
 pub const Mob = @import("mob.zig").Mob;
 pub const MobItem = @import("mob.zig").MobItem;
+
+pub const NPC = @import("npc.zig").NPC;

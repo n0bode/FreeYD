@@ -40,7 +40,6 @@ end
 ---@param func fun(peer: Peer, mob: SpawnedMob, location: integer)
 local function multicast(src, dest, func)
     local multicast_area = tonumber(os.getenv("MULTICAST_AREA"))
-    local max_players = tonumber(os.getenv("MAX_PLAYERS"))
 
     local r_src = {
         x = src.x - multicast_area / 2,
@@ -63,7 +62,7 @@ local function multicast(src, dest, func)
         local mob_id = mob.mob_id
 
         local mob_pos = { x = spawned_mob.x, y = spawned_mob.y }
-        local is_player = mob_id <= max_players
+        local is_player = server:is_player(mob_id)
 
         if is_player then
             local another_peer = server:get_peer(mob.mob_id)

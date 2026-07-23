@@ -45,26 +45,26 @@ pub const MobItem = packed struct(u16) {
 
 pub const Mob = struct {
     // if user need peerId
-    mobId: u16,
-    name: [16]u8,
+    mobId: u16 = 0,
+    name: [16]u8 = [_]u8{0} ** 16,
     // must start with -1
-    pkLevel: u8,
+    pkLevel: u8 = 255,
     // current kill count of mob
-    currentKill: u8,
+    currentKill: u8 = 0,
     // total kill count of mob
-    totalKill: u16,
+    totalKill: u16 = 0,
     // item with itemID and level
-    equipments: [16]MobItem,
+    equipments: [16]MobItem = [_]MobItem{.{}} ** 16,
     // current buffers/debuffers actived in mob
-    buffers: [16]Buffer,
-    guildId: u16,
-    stats: Stats,
+    buffers: [16]Buffer = [_]Buffer{.{}} ** 16,
+    guildId: u16 = 0,
+    stats: Stats = .{},
     // check this
-    spawnType: u16,
+    spawnType: u16 = 0,
     // if item is a ancient item
-    anctCode: [16]u8,
+    anctCode: [16]u8 = [_]u8{0} ** 16,
     // text above mob head
-    tab: [26]u8,
+    tab: [26]u8 = [_]u8{0} ** 26,
 };
 
 pub const StatsState = packed struct(u16) {
@@ -93,7 +93,7 @@ pub const Stats = extern struct {
     level: u16 = 1,
     defense: i16 = 10,
     attack: i16 = 50,
-    state: StatsState,
+    state: StatsState = .{},
     maxHp: u16 = 100,
     maxMp: u16 = 100,
     hp: u16 = 100,
@@ -102,7 +102,7 @@ pub const Stats = extern struct {
     int: i16 = 0,
     dex: i16 = 0,
     con: i16 = 0,
-    skills: SkillAttributes,
+    skills: SkillAttributes = .{},
 };
 
 pub const Buffer = extern struct {

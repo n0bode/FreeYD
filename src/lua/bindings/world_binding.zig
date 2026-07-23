@@ -73,7 +73,7 @@ fn lua__each_mobs(L: *lua.State) i32 {
         .fnIndex = L.saveRegistry(2),
     };
 
-    self.mobsInWorld.listInArea(.{
+    self.treeMobs.listInArea(.{
         .x = 0,
         .y = 0,
         .width = 4096,
@@ -99,10 +99,11 @@ fn lua__create_mob(L: *lua.State) i32 {
         return 1;
     };
 
-    const spawned = self.createMob(x, y, mob) catch {
+    const spawned = self.createMobSpawned(mob, x, y) catch {
         L.pushNil();
         return 1;
     };
+
     SpawnedMobBinding.newUserdata(L, spawned);
     return 1;
 }
@@ -181,7 +182,7 @@ fn lua__each_mobs_in_area(L: *lua.State) i32 {
         .fnIndex = L.saveRegistry(3),
     };
 
-    self.mobsInWorld.listInArea(.{
+    self.treeMobs.listInArea(.{
         .x = x,
         .y = y,
         .width = width,

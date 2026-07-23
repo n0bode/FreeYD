@@ -4,23 +4,52 @@ const domains = @import("domains/domains.zig");
 const MobQuadTree = @import("core.zig").MobQuadTree;
 
 pub const SpawnedMob = MobQuadTree.Point;
+const Position = domains.Position;
+const Item = domains.Item;
 const Mob = domains.Mob;
+const NPC = domains.NPC;
+
+const MAX_PLAYERS = 1000;
+
+pub const SpawnedNPC = struct {
+    npc: NPC,
+    fnUpdate: i32,
+    fnInteract: i32,
+    spawnedMob: SpawnedMob,
+};
+
+pub const CreateNPC = struct {
+    name: []const u8,
+    position: Position,
+    onUpdate: i32,
+    onInteract: i32,
+    equipments: [16]Item,
+};
 
 pub const World = struct {
     arena: std.heap.ArenaAllocator,
 
-    mobsInWorld: MobQuadTree,
+    npcs: std.ArrayList(SpawnedNPC),
+    mobs: std.ArrayList(Mob),
+    treeMobs: MobQuadTree,
+    maxPlayers: usize,
 
-    pub fn init(child_allocator: Allocator) World {
-        return World{
-            .arena = .init(child_allocator),
-            // map size
-            .mobsInWorld = MobQuadTree.init(child_allocator, 4096),
-        };
+    pub fn init(child_allocator: Allocator, maxPlayers: usize) !World {
+        var self: World = undefined;
+        self.arena = std.heap.ArenaAllocator.init(child_allocator);
+        const allocator = self.arena.allocator();
+
+        self.maxPlayers = maxPlayers;
+        // map size
+        self.treeMobs = MobQuadTree.init(allocator, 4096);
+        // init with 1000 mobs
+        // important: more mobs, needs heap invoke commands
+        self.mobs = try .initCapacity(allocator, 1000);
+        self.npcs = try .initCapacity(allocator, 100);
+        return self;
     }
 
     pub fn deinit(self: World) void {
-        self.mobsInWorld.deinit();
         self.arena.deinit();
     }
 
@@ -30,25 +59,74 @@ pub const World = struct {
 
         mobSpawned.x = x;
         mobSpawned.y = y;
-        if (!try self.mobsInWorld.insert(mobSpawned)) {
+        if (!try self.treeMobs.insert(mobSpawned)) {
             return error.MobOutOfMap;
         }
         return mobSpawned;
     }
 
-    pub fn createMob(self: *World, x: i16, y: i16, mobBase: *Mob) !*SpawnedMob {
-        const allocator = self.arena.allocator();
+    pub fn createNPC(self: *World, info: CreateNPC) !*SpawnedNPC {
+        const index = self.npcs.items.len;
+        var npc: SpawnedNPC = undefined;
 
-        var point = try allocator.create(SpawnedMob);
-        point.x = @intCast(x);
-        point.y = @intCast(y);
-        point.data = mobBase.*;
+        var mobBase = Mob{};
+        @memcpy(mobBase.name[0..info.name.len], info.name[0..]);
+        for (info.equipments, 0..) |item, i| {
+            if (i == 14) {
+                mobBase.equipments[i] = .fromMount(item);
+            } else {
+                mobBase.equipments[i] = .from(item);
+            }
+        }
 
-        if (!try self.mobsInWorld.insert(point)) {
-            allocator.destroy(point);
+        const mob = try self.createMob(&mobBase);
+        const position = info.position;
+
+        mob.stats.state.merchant = 1;
+        npc.npc.id = mob.mobId;
+        npc.npc.mob = mob;
+        npc.npc.start_position = position;
+        npc.npc.current_position = npc.npc.start_position;
+
+        @memset(npc.npc.name[0..], 0);
+        @memcpy(npc.npc.name[0..info.name.len], info.name[0..]);
+
+        npc.fnInteract = info.onInteract;
+        npc.fnUpdate = info.onUpdate;
+        npc.spawnedMob = .{ .x = position.x, .y = position.y, .data = mob };
+
+        self.npcs.appendAssumeCapacity(npc);
+        const ptr = &self.npcs.items[index];
+        if (!try self.treeMobs.insert(&ptr.spawnedMob)) {
+            _ = self.npcs.pop();
             return error.MobOutOfMap;
         }
-        return point;
+        return ptr;
+    }
+
+    pub fn createMob(self: *World, mobBase: *Mob) !*Mob {
+        self.mobs.appendAssumeCapacity(mobBase.*);
+        const index = self.mobs.items.len - 1;
+        const mob = &self.mobs.items[index];
+        mob.mobId = @as(u16, @intCast(index)) + @as(u16, @intCast(self.maxPlayers));
+        return mob;
+    }
+
+    pub fn createMobSpawned(self: *World, mobBase: *Mob, x: i16, y: i16) !*SpawnedMob {
+        const allocator = self.arena.allocator();
+
+        const mob = try self.createMob(mobBase);
+
+        var mobSpawned = try allocator.create(SpawnedMob);
+        mobSpawned.x = x;
+        mobSpawned.y = y;
+        mobSpawned.data = mob;
+
+        if (!try self.treeMobs.insert(mobSpawned)) {
+            allocator.destroy(mobSpawned);
+            return error.MobOutOfMap;
+        }
+        return mobSpawned;
     }
 
     /// allocate um result array with mob found
@@ -59,6 +137,6 @@ pub const World = struct {
             .width = @intCast(w),
             .height = @intCast(h),
         };
-        return self.mobsInWorld.listInAreaAlloc(allocator, rect);
+        return self.treeMobs.listInAreaAlloc(allocator, rect);
     }
 };

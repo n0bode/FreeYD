@@ -12,6 +12,7 @@ pub const metatableName = mapper.metatableName;
 const AttributeBinding = Mapper(domain.ItemAttribute);
 
 pub fn toUserdata(L: *lua.State, idx: i32) ?*domain.Item {
+    // TODO: accept table too
     return mapper.toUserdata(L, idx);
 }
 
@@ -59,10 +60,11 @@ fn lua__new(L: *lua.State) i32 {
         L.checkType(idx, .Table);
         L.getField(idx, "index");
         item.attributes[i - 1].index = @intCast(L.checkInteger(-1));
+        L.pop(1);
 
         L.getField(idx, "value");
         item.attributes[i - 1].value = @intCast(L.checkInteger(-1));
-        L.pop(2);
+        L.pop(1);
     }
 
     const ptr: *domain.Item = L.newUserdata(domain.Item);

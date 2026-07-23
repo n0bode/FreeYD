@@ -2,6 +2,7 @@ pub const ParseArgs = @import("parsearg/parsearg.zig").ParseArgs;
 pub const QuadTree = @import("quadtree/quadtree.zig").QuadTree;
 pub const BoundedArray = @import("boundedarray/boundedarray.zig").BoundedArray;
 pub const RTree = @import("rtree/rtree.zig").RTree;
+pub const EnvParse = @import("envparse/envparse.zig");
 
 const testing = @import("std").testing;
 

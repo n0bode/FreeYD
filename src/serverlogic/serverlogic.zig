@@ -19,55 +19,23 @@ pub const ServerLogic = struct {
     database: Database,
     state: *lua.State,
     world: core.World,
+    maxPlayers: usize,
 
     pub fn init(
         allocator: Allocator,
         server: *network.Server,
         database: Database,
         L: *lua.State,
-    ) ServerLogic {
+        maxPlayers: usize,
+    ) !ServerLogic {
         return .{
             .arena = .init(allocator),
             .dispatcher = .init(allocator),
             .server = server,
             .database = database,
             .state = L,
-            .world = .init(allocator),
-        };
-    }
-
-    fn createMobs(self: *ServerLogic) void {
-        var mobTrainer = std.mem.zeroInit(core.domains.Mob, .{
-            .mobId = 1001,
-        });
-
-        const name = "Mamador";
-        @memcpy(mobTrainer.name[0..name.len], name[0..]);
-        mobTrainer.equipments[0] = .{
-            .itemId = 60,
-        };
-        mobTrainer.equipments[1] = .{
-            .itemId = 130,
-        };
-        mobTrainer.equipments[2] = .{
-            .itemId = 126,
-        };
-        mobTrainer.equipments[3] = .{
-            .itemId = 127,
-        };
-        mobTrainer.equipments[4] = .{
-            .itemId = 128,
-        };
-        mobTrainer.equipments[5] = .{
-            .itemId = 129,
-        };
-        mobTrainer.equipments[6] = .{
-            .itemId = 986,
-        };
-
-        _ = self.world.createMob(2124, 2042, &mobTrainer) catch {
-            logger.err("failed to create mob", .{});
-            return;
+            .world = try core.World.init(allocator, maxPlayers),
+            .maxPlayers = maxPlayers,
         };
     }
 
@@ -85,7 +53,6 @@ pub const ServerLogic = struct {
 
     pub fn loadScripts(self: *ServerLogic, io: std.Io) !void {
         self.bindLuaTypes();
-        self.createMobs();
         try loader.loadScripts(self.arena.allocator(), io, self.state);
     }
 

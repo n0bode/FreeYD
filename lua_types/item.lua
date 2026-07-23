@@ -2,8 +2,8 @@
 
 ---Item description
 ---@class Item
----@field itemID integer Item ID
----@field attributes ItemAttribute[] Array of 3 effect values
+---@field item_id integer Item ID
+---@field attrs ItemAttribute[0..3] Array of 3 effect values
 Item = {}
 
 

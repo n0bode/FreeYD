@@ -7,6 +7,6 @@ pub const ItemAttribute = extern struct {
 };
 
 pub const Item = extern struct {
-    itemID: u16,
+    itemID: u16 = 0,
     attributes: [3]ItemAttribute = [_]ItemAttribute{.{}} ** 3,
 };

@@ -15,10 +15,11 @@ pub const DatabaseBinding = @import("database_binding.zig").DatabaseBinding;
 pub const AccountBinding = @import("account_binding.zig").AccountBinding;
 pub const CharacterBinding = @import("character_binding.zig").CharacterBinding;
 pub const MobBinding = @import("mob_binding.zig").MobBinding;
-pub const PositionBinding = Mapper(domain.Position);
+pub const PositionBinding = @import("position_bindig.zig").PositionBinding;
 pub const SpawnedMobBinding = Mapper(core.SpawnedMob);
 pub const WorldBinding = @import("world_binding.zig").WorldBinding;
 pub const RTreeBinding = @import("libs/rtree_binding.zig").RTreeBinding;
+pub const ItemBinding = @import("item_binding.zig").ItemBinding;
 
 const testing = @import("std").testing;
 test {

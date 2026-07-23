@@ -3,6 +3,7 @@ const buiiltin = @import("builtin");
 const posix = std.posix;
 const Init = std.process.Init;
 
+const ParseEnv = @import("utils").EnvParse;
 const PacketFromClient = @import("network").packet.PacketFromClient;
 const Server = @import("network").Server;
 const Peer = @import("network").Peer;
@@ -83,6 +84,8 @@ pub fn main(init: Init) !void {
     try args.parse(init.minimal.args.iterate(), &config);
     captureSignal();
 
+    const MAX_PLAYERS: usize = ParseEnv.getEnv(usize, init.environ_map, "MAX_PLAYERS", 1000);
+
     var arena = std.heap.ArenaAllocator.init(init.gpa);
     const allocator = arena.allocator();
     defer arena.deinit();
@@ -91,7 +94,14 @@ pub fn main(init: Init) !void {
     const L = try lua.State.init(allocator);
     var server: Server = try Server.init(allocator, config.config);
 
-    var serverLogic = ServerLogic.init(allocator, &server, database.interface(), L);
+    var serverLogic = try ServerLogic.init(
+        allocator,
+        &server,
+        database.interface(),
+        L,
+        MAX_PLAYERS,
+    );
+
     defer serverLogic.deinit();
 
     server.setOnReceivePeerMessage(serverlogic.onReceiveMessage, &serverLogic);

@@ -31,18 +31,17 @@ server:on("on_spawn_char", function(peer, req)
         return
     end
 
-    local max_players = tonumber(os.getenv("MAX_PLAYERS"))
     local player_mob = peer:get_player_mob()
 
     local world = server:get_world()
     world:move_mob(player_mob, player_mob.x, player_mob.y)
     world:each_mobs(function(mob)
         -- owns server
-        local owner_id = 0x7530
+        local owner_id = mob.data.mob_id
 
         local mob_id = mob.data.mob_id
         logger:info("mob_id " .. mob_id)
-        local is_player = mob_id <= max_players
+        local is_player = server:is_player(mob_id)
         local is_mine = mob_id == peer.peer_id
 
         if (is_player) then

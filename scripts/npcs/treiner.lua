@@ -13,6 +13,7 @@ server:create_npc {
         [EquipmentSlot.boots] = Item.new(127),  -- Example item ID for feet equipment
         [EquipmentSlot.gloves] = Item.new(128), -- Example item ID for hands equipment
         [EquipmentSlot.weapon] = Item.new(129), -- Example item ID for weapon equipment
+        [EquipmentSlot.cape] = Item.new(2),     -- Example item ID for weapon equipment
     },
     on_update = function(npc)
         -- This function is called every server tick to update the NPC's state.
@@ -33,6 +34,7 @@ server:create_npc {
         [EquipmentSlot.boots] = Item.new(127),  -- Example item ID for feet equipment
         [EquipmentSlot.gloves] = Item.new(128), -- Example item ID for hands equipment
         [EquipmentSlot.weapon] = Item.new(129), -- Example item ID for weapon equipment
+        [EquipmentSlot.cape] = Item.new(1),     -- Example item ID for weapon equipment
     },
     on_update = function(npc)
         -- This function is called every server tick to update the NPC's state.

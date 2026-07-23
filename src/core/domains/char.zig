@@ -52,7 +52,7 @@ pub const EquipmentSlot = enum(u8) {
     unk12 = 12,
     unk13 = 13,
     mount = 14,
-    unk15 = 15,
+    cape = 15,
 };
 
 pub const Character = extern struct {

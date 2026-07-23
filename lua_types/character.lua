@@ -97,7 +97,7 @@ EquipmentSlot = {
     unk12 = 12,
     unk13 = 13,
     mount = 14,
-    unk15 = 15,
+    cape = 15,
 }
 
 

@@ -61,7 +61,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
             rb: ?*Node = null,
 
             bounds: Rect,
-            items: BoundedArray(*Point, capacity) = .{},
+            items: BoundedArray(?*Point, capacity) = .{},
 
             pub fn init(rect: Rect) Node {
                 return .{ .bounds = rect };
@@ -155,10 +155,12 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
             });
             node.rt = &nodes[3];
 
-            while (node.items.pop()) |item| {
-                for (nodes) |*subnode| {
-                    if (subnode.push(item)) {
-                        break;
+            while (node.items.pop()) |slot| {
+                if (slot) |item| {
+                    for (nodes) |*subnode| {
+                        if (subnode.push(item)) {
+                            break;
+                        }
                     }
                 }
             }
@@ -206,13 +208,15 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
 
             if (node.items.len > 0) {
                 for (0..node.items.len) |iPoint| {
-                    const point = (node.items.get(iPoint) catch {
+                    const pp = (node.items.get(iPoint) catch {
                         continue;
                     }).*;
 
-                    if (rect.contains(point)) {
-                        if (func(userdata, node, iPoint, point) and exclusive) {
-                            return true;
+                    if (pp) |point| {
+                        if (rect.contains(point)) {
+                            if (func(userdata, node, iPoint, point) and exclusive) {
+                                return true;
+                            }
                         }
                     }
                 }

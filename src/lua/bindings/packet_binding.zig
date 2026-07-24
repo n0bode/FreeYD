@@ -10,7 +10,7 @@ const PacketInput = network.PacketInput;
 const packets = network.packet.client;
 
 pub const PacketInputBinding = @This();
-pub const HeaderBinding = utils.LuaMapperStruct(network.Header);
+pub const HeaderBinding = utils.MapperStructPtr(network.Header);
 
 pub fn getMetatableName() []const u8 {
     return "mt_" ++ @typeName(PacketInput);

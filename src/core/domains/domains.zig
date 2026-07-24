@@ -2,6 +2,7 @@ const std = @import("std");
 
 pub const Item = @import("item.zig").Item;
 pub const ItemAttribute = @import("item.zig").ItemAttribute;
+pub const StorageType = @import("item.zig").StorageType;
 pub const Account = @import("account.zig").Account;
 pub const AccountState = @import("account.zig").AccountState;
 

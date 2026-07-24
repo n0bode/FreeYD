@@ -15,6 +15,7 @@ server:on("on_spawn_char", function(peer, req)
         return
     end
 
+    logger:info("character " .. char.name);
     char.tab = "peerId:" .. peer.peer_id
     account.char_selected = req.char_slot
     account.state = AccountState.PLAYING

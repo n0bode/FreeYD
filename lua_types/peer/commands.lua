@@ -35,3 +35,12 @@ MoveDirection = {
 
 ---@class MobDeleteCommand
 ---@field mob_id integer
+
+---@class ItemMoveCommand
+---@field storage StorageType
+---@field slot integer
+---@field mob_id integer
+---@field item Item
+
+---@class UpdateEquipmentsCommand
+---@field mob Mob

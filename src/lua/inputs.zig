@@ -81,7 +81,7 @@ pub const OpcodeFromClient = enum(u16) {
 pub const StorageType = enum(u8) {
     INVENTORY = 0,
     EQUIPMENT = 1,
-    WAREHOUSE = 2,
+    CARGO = 2,
 };
 
 pub const PacketMoveItemInput = extern struct {

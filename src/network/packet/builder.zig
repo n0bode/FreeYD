@@ -7,6 +7,7 @@ const domain = @import("packet.zig").domains;
 const Position = domain.Position;
 const Character = domain.Character;
 const Mob = domain.Mob;
+const Item = domain.Item;
 
 pub const builders = @This();
 
@@ -71,5 +72,35 @@ pub fn buildMotionMob(
         .kind = @intCast(kind),
         .speed = @intCast(speed),
         .destination = .{ .x = destination.x, .y = destination.y },
+    };
+}
+
+pub fn buildItemMove(
+    peerId: u16,
+    storage: u16,
+    slot: u16,
+    item: Item,
+) packets.PacketItemCreateOutput {
+    return packets.PacketItemCreateOutput{
+        .header = .{
+            .operationCode = @intFromEnum(Opcode.ITEM_MOVED),
+            .index = peerId,
+        },
+        .storage = storage,
+        .slot = slot,
+        .item = @bitCast(item),
+    };
+}
+
+pub fn buildUpdateEquipment(
+    mob: *Mob,
+) packets.PacketUpdateEquipmentOutput {
+    return packets.PacketUpdateEquipmentOutput{
+        .header = .{
+            .operationCode = @intFromEnum(Opcode.UPDATE_EQUIPMENTS),
+            .index = mob.mobId,
+        },
+        .equipments = @bitCast(mob.equipments),
+        .anctCode = mob.anctCode,
     };
 }

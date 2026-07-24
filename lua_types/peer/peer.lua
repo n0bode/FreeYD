@@ -33,6 +33,7 @@ function Peer:get_player_mob() end
 
 ---Send a event to client
 ---@overload fun(self: Peer, event: "spawn_char", data: CharSpawnCommand, opts: SendCommandOptions?) ?string
+---@overload fun(self: Peer, event: "move_item", data: ItemMoveCommand, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "spawn_mob", data: MobSpawnCommand, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "delete_mob", data: MobDeleteCommand, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "motion_mob", data: MobMotionCommand, opts: SendCommandOptions?) ?string
@@ -41,5 +42,6 @@ function Peer:get_player_mob() end
 ---@overload fun(self: Peer, event: "char_created", message: string?, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "char_deleted", message: string?, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "char_create_failed", message: string?, opts: SendCommandOptions?) ?string
+---@overload fun(self: Peer, event: "update_equipments", data: UpdateEquipmentsCommand, opts: SendCommandOptions?) ?string
 ---@return string? error message
 function Peer:send_command(event, data) end

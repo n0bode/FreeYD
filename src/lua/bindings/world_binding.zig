@@ -11,7 +11,7 @@ const MobBinding = bindings.MobBinding;
 const lua = bindings.lua;
 const utils = @import("utils.zig");
 
-const mapper = utils.LuaMapperStruct(World);
+const mapper = utils.MapperStructPtr(World);
 
 pub const WorldBinding = @This();
 

@@ -8,12 +8,13 @@ server:create_npc {
     end,
     equipments = {
         [EquipmentSlot.face] = Item.new(60),    -- Example item ID for face equipment
-        [EquipmentSlot.body] = Item.new(130),   -- Example item ID for body equipment
-        [EquipmentSlot.pants] = Item.new(126),  -- Example item ID for legs equipment
-        [EquipmentSlot.boots] = Item.new(127),  -- Example item ID for feet equipment
-        [EquipmentSlot.gloves] = Item.new(128), -- Example item ID for hands equipment
-        [EquipmentSlot.weapon] = Item.new(129), -- Example item ID for weapon equipment
-        [EquipmentSlot.cape] = Item.new(2),     -- Example item ID for weapon equipment
+        [EquipmentSlot.head] = Item.new(130),   -- Example item ID for body equipment
+        [EquipmentSlot.body] = Item.new(126),   -- Example item ID for body equipment
+        [EquipmentSlot.pants] = Item.new(127),  -- Example item ID for legs equipment
+        [EquipmentSlot.boots] = Item.new(128),  -- Example item ID for feet equipment
+        [EquipmentSlot.gloves] = Item.new(129), -- Example item ID for hands equipment
+        [EquipmentSlot.weapon] = Item.new(986), -- Example item ID for weapon equipment
+        [EquipmentSlot.cape] = Item.new(543),   -- Example item ID for weapon equipment
     },
     on_update = function(npc)
         -- This function is called every server tick to update the NPC's state.
@@ -29,12 +30,13 @@ server:create_npc {
     end,
     equipments = {
         [EquipmentSlot.face] = Item.new(60),    -- Example item ID for face equipment
-        [EquipmentSlot.body] = Item.new(130),   -- Example item ID for body equipment
-        [EquipmentSlot.pants] = Item.new(126),  -- Example item ID for legs equipment
-        [EquipmentSlot.boots] = Item.new(127),  -- Example item ID for feet equipment
-        [EquipmentSlot.gloves] = Item.new(128), -- Example item ID for hands equipment
-        [EquipmentSlot.weapon] = Item.new(129), -- Example item ID for weapon equipment
-        [EquipmentSlot.cape] = Item.new(1),     -- Example item ID for weapon equipment
+        [EquipmentSlot.head] = Item.new(130),   -- Example item ID for body equipment
+        [EquipmentSlot.body] = Item.new(126),   -- Example item ID for body equipment
+        [EquipmentSlot.pants] = Item.new(127),  -- Example item ID for legs equipment
+        [EquipmentSlot.boots] = Item.new(128),  -- Example item ID for feet equipment
+        [EquipmentSlot.gloves] = Item.new(129), -- Example item ID for hands equipment
+        [EquipmentSlot.weapon] = Item.new(986), -- Example item ID for weapon equipment
+        [EquipmentSlot.cape] = Item.new(543),   -- Example item ID for weapon equipment
     },
     on_update = function(npc)
         -- This function is called every server tick to update the NPC's state.

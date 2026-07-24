@@ -26,6 +26,8 @@ const funcs = std.StaticStringMap(CommandFN).initComptime(&.{
     .{ "char_create_failed", charCreateFailed },
     .{ "char_deleted", charDeleted },
     .{ "delete_mob", mobDelete },
+    .{ "move_item", itemMove },
+    .{ "update_equipments", updateEquipment },
 });
 
 pub fn dispatch(peer: *Peer, command: []const u8, L: *State) bool {
@@ -98,12 +100,15 @@ fn mobMove(peer: *Peer, L: *State) void {
         _ = L.throw("mob_move: 'origin' must be a Position instance");
         return;
     };
+    L.pop(1);
 
     L.getField(3, "kind");
     const kind = L.checkInteger(-1);
+    L.pop(1);
 
     L.getField(3, "speed");
     const speed = L.checkInteger(-1);
+    L.pop(1);
 
     L.getField(3, "destination");
     var dest = PositionBinding.toUserdata(L, -1) orelse {
@@ -113,6 +118,7 @@ fn mobMove(peer: *Peer, L: *State) void {
 
     L.getField(3, "mob_id");
     const mobId = L.checkInteger(-1);
+    L.pop(1);
 
     var packet = builders.buildMotionMob(
         @intCast(mobId),
@@ -128,6 +134,7 @@ fn mobMove(peer: *Peer, L: *State) void {
         const len = @min(packet.route.len, routes.len);
         @memcpy(packet.route[0..len], routes[0..len]);
     }
+    L.pop(1);
 
     injectOptions(L, &packet.header);
     peer.sendPacket(&packet) catch {};
@@ -209,9 +216,49 @@ fn mobDelete(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
     L.getField(3, "mob_id");
     const mobId: u16 = @intCast(L.checkInteger(-1));
-
+    L.pop(1);
     var pack = builders.buildDeleteMob(mobId);
 
+    peer.sendPacket(&pack) catch {};
+}
+
+fn itemMove(peer: *Peer, L: *State) void {
+    L.checkType(3, .Table);
+
+    L.getField(3, "storage");
+    const storage: u16 = @intCast(L.checkInteger(-1));
+    L.pop(1);
+
+    L.getField(3, "slot");
+    const slot: u16 = @intCast(L.checkInteger(-1));
+    L.pop(1);
+
+    L.getField(3, "mob_id");
+    const mobId: u16 = @intCast(L.checkInteger(-1));
+    L.pop(1);
+
+    L.getField(3, "item");
+    const item = binding.ItemBinding.toUserdata(L, -1) orelse {
+        _ = L.throw("item_move: 'item' must be an Item instance");
+        return;
+    };
+    L.pop(1);
+
+    var pack = builders.buildItemMove(mobId, storage, slot, item.*);
+    peer.sendPacket(&pack) catch {};
+}
+
+fn updateEquipment(peer: *Peer, L: *State) void {
+    L.checkType(3, .Table);
+
+    L.getField(3, "mob");
+    const mob = binding.MobBinding.toUserdata(L, -1) orelse {
+        _ = L.throw("update_equipment: 'mob' must be a Mob instance");
+        return;
+    };
+    L.pop(1);
+
+    var pack = builders.buildUpdateEquipment(mob);
     peer.sendPacket(&pack) catch {};
 }
 

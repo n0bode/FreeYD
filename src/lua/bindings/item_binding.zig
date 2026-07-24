@@ -1,4 +1,4 @@
-const Mapper = @import("utils.zig").LuaMapperStruct;
+const Mapper = @import("utils.zig").MapperStructPtr;
 const bindFunction = @import("utils.zig").bindFunctions;
 const domain = @import("binding.zig").domain;
 const lua = @import("binding.zig").lua;

@@ -1,6 +1,6 @@
 const bindings = @import("binding.zig");
 const Position = bindings.domain.Position;
-const Mapper = @import("utils.zig").LuaMapperStruct;
+const Mapper = @import("utils.zig").MapperStructPtr;
 
 const mapper = Mapper(Position);
 

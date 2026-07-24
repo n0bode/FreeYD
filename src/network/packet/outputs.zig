@@ -14,7 +14,6 @@ pub const OpcodeToClient = enum(u16) {
     charCreated = @intFromEnum(Opcode.CHAR_CREATED),
     charDeleted = @intFromEnum(Opcode.CHAR_DELETED),
     charSpawn = @intFromEnum(Opcode.CHAR_SPAWNED),
-    itemCreate = @intFromEnum(Opcode.ITEM_CREATE),
     messageText = @intFromEnum(Opcode.TEXTMESSAGE),
     enterAccount = @intFromEnum(Opcode.CHAR_LIST),
 };
@@ -159,7 +158,7 @@ pub const StorageType = enum(u8) {
 
 pub const PacketItemCreateOutput = extern struct {
     header: Header,
-    slotType: u16,
+    storage: u16,
     slot: u16,
     item: ItemData,
 };
@@ -497,4 +496,10 @@ pub const PacketMobMoveOutput = extern struct {
     kind: u32,
     destination: PositionData,
     route: [24]i8 = [_]i8{0} ** 24,
+};
+
+pub const PacketUpdateEquipmentOutput = extern struct {
+    header: Header,
+    equipments: [16]MobItem,
+    anctCode: [16]u8,
 };

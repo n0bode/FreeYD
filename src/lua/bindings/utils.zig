@@ -111,7 +111,7 @@ pub fn walkGeneratorMTS(comptime T: anytype, L: *State) void {
             L.setGlobal(enumName);
         },
         .@"struct" => {
-            LuaMapperStruct(T).bind(L);
+            MapperStructPtr(T).bind(L);
             inline for (std.meta.fields(T)) |field| {
                 switch (@typeInfo(field.type)) {
                     .@"struct" => walkGeneratorMTS(field.type, L),
@@ -159,7 +159,7 @@ pub fn bindFunctions(L: *State, metatableName: []const u8, fns: []const Reg) voi
     L.setFuncs(fns);
 }
 
-pub fn LuaMapperStruct(comptime T: anytype) type {
+pub fn MapperStructPtr(comptime T: anytype) type {
     return struct {
         pub const metatableName = "mt_" ++ @typeName(T);
         pub const Type = T;

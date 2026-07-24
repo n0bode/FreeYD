@@ -6,7 +6,7 @@ pub const core = @import("core");
 pub const domain = core.domains;
 pub const Database = @import("database").Database;
 
-pub const Mapper = @import("utils.zig").LuaMapperStruct;
+pub const Mapper = @import("utils.zig").MapperStructPtr;
 
 pub const PacketBinder = @import("packet_binding.zig").PacketInputBinding;
 pub const PeerBinding = @import("peer/peer_binding.zig").PeerBinding;

@@ -3,6 +3,7 @@ const domain = @import("domains.zig");
 
 const Stats = domain.Stats;
 const Item = domain.Item;
+const StorageType = domain.StorageType;
 const ResistStats = domain.ResitsStats;
 
 pub const CharacterClass = enum(u8) {
@@ -159,5 +160,37 @@ pub const Character = extern struct {
         mob.name[12] = 0;
         mob.name[13] = 0;
         return mob;
+    }
+
+    pub fn getItem(self: *Character, storage: StorageType, slot: u8) ?Item {
+        return switch (storage) {
+            .INVENTORY => self.carry[slot],
+            .EQUIPMENT => self.equipments[slot],
+            else => null,
+        };
+    }
+
+    pub fn getSlot(self: *Character, storage: StorageType, slot: u8) ?*Item {
+        return switch (storage) {
+            .INVENTORY => &self.carry[slot],
+            .EQUIPMENT => &self.equipments[slot],
+            else => null,
+        };
+    }
+
+    pub fn swapItems(
+        self: *Character,
+        destStorage: StorageType,
+        destSlot: u8,
+        srcStorage: StorageType,
+        srcSlot: u8,
+    ) bool {
+        const destItem = self.getSlot(destStorage, destSlot) orelse return false;
+        const srcItem = self.getSlot(srcStorage, srcSlot) orelse return false;
+
+        const temp = destItem.*;
+        destItem.* = srcItem.*;
+        srcItem.* = temp;
+        return true;
     }
 };

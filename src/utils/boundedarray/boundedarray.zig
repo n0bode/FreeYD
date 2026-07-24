@@ -57,7 +57,8 @@ pub fn BoundedArray(comptime T: type, comptime capacity: usize) type {
                 return;
             }
 
-            for (index..(self.len - 1)) |i| {
+            const until = self.len - 2;
+            for (index..until) |i| {
                 self.items[index] = self.items[index + i];
             }
         }

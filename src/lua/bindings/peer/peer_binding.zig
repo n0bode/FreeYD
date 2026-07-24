@@ -119,11 +119,8 @@ fn lua__get_player_mob(L: *State) i32 {
     const account = peer.account;
     var char: *Character = @constCast(&account.characters[@intCast(account.charSelected)]);
     if (peer.playerState == null) {
-        var mob = char.toMob();
-        mob.mobId = @intCast(peer.peerId);
-
         peer.playerState = .{
-            .mob = mob,
+            .mob = undefined,
             .spawnedMob = .{
                 .x = @intCast(char.position.x),
                 .y = @intCast(char.position.y),
@@ -133,6 +130,9 @@ fn lua__get_player_mob(L: *State) i32 {
     }
 
     if (peer.playerState) |*state| {
+        state.mob = char.toMob();
+        state.mob.mobId = @intCast(peer.peerId);
+
         // create reference to the mob in the spawned mob userdata so that it can be accessed from Lua
         state.spawnedMob.data = &state.mob;
         SpawnedMobBinding.newUserdata(L, &state.spawnedMob);

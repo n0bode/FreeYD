@@ -82,7 +82,7 @@ pub const World = struct {
         const mob = try self.createMob(&mobBase);
         const position = info.position;
 
-        mob.stats.state.merchant = 0;
+        mob.stats.state.merchant = 1;
         npc.npc.id = mob.mobId;
         npc.npc.mob = mob;
         npc.npc.start_position = position;

@@ -86,3 +86,17 @@ AttributeSection = {
 ---@class TeleportEvent
 ---@field header Header
 ---@field data string
+
+---@enum StorageType
+StorageType = {
+    INVENTORY = 0,
+    EQUIPMENT = 1,
+    CARGO = 2,
+}
+
+---@class MoveItemEvent
+---@field header Header
+---@field dest_storage StorageType
+---@field dest_slot integer
+---@field source_storage StorageType
+---@field source_slot integer

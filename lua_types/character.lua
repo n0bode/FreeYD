@@ -111,6 +111,20 @@ function Character:set_equipment(slot, item) end
 ---@return Item?
 function Character:get_equipment(slot) end
 
+---Get a item from the character's equipment by its item ID.
+---@param storage StorageType
+---@param slot integer
+---@return Item?
+function Character:get_item(storage, slot) end
+
+---Swap two items in the character's equipment.
+---@param storageDest StorageType
+---@param slotDest integer
+---@param storageSrc StorageType
+---@param slotSrc integer
+---@return boolean success
+function Character:swap_items(storageDest, slotDest, storageSrc, slotSrc) end
+
 ---Return a mob model from the character class.
 ---@return Mob
 function Character:to_mob() end

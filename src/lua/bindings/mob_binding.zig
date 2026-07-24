@@ -2,7 +2,7 @@ const bindings = @import("binding.zig");
 const utils = @import("utils.zig");
 
 const domain = bindings.domain;
-const mapper = utils.LuaMapperStruct(domain.Mob);
+const mapper = utils.MapperStructPtr(domain.Mob);
 
 pub const MobBinding = @This();
 

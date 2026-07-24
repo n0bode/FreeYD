@@ -128,6 +128,7 @@ pub const ServerLogic = struct {
             if (L.isNil(-1) or (L.isBoolean(-1) and L.toBoolean(-1))) {
                 npc.npc.updatedAt = serverTime;
             }
+            L.pop(1);
         }
     }
 

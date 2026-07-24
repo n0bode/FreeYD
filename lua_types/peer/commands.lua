@@ -44,3 +44,18 @@ MoveDirection = {
 
 ---@class UpdateEquipmentsCommand
 ---@field mob Mob
+
+---@enum ChatType
+ChatType = {
+    NORMAL = 0,
+    WHISPER = 1,
+    PARTY = 2,
+    GLOBAL = 3,
+    GUILD = 4,
+    SHOUT = 5,
+}
+
+---@class ChatMessageCommand
+---@field message string
+---@field type ChatType
+---@field mob_id integer mob id / peer id

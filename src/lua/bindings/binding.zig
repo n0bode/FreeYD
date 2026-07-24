@@ -20,6 +20,7 @@ pub const SpawnedMobBinding = Mapper(core.SpawnedMob);
 pub const WorldBinding = @import("world_binding.zig").WorldBinding;
 pub const RTreeBinding = @import("libs/rtree_binding.zig").RTreeBinding;
 pub const ItemBinding = @import("item_binding.zig").ItemBinding;
+pub const NPCBinding = Mapper(domain.NPC);
 
 const testing = @import("std").testing;
 test {

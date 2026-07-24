@@ -48,7 +48,39 @@ pub const ServerLogic = struct {
         peer: *network.Peer,
         message: ?*network.PacketInput,
     ) bool {
+        if (message) |input| {
+            switch (input.data) {
+                .interactionMob => |req| {
+                    self.callMobInteract(peer, req.mobId) catch {
+                        logger.err("Error calling mob interact", .{});
+                    };
+                },
+                else => {},
+            }
+        }
+
         return self.dispatcher.dispatch(self.state, peer, message);
+    }
+
+    fn callMobInteract(self: *ServerLogic, peer: *network.Peer, mobId: u32) !void {
+        for (self.world.npcs.items) |*npc| {
+            if (npc.npc.id == mobId) {
+                const L = self.state;
+                L.restoreRegistry(npc.fnInteract);
+                if (L.isFunction(-1)) {
+                    bindings.NPCBinding.newUserdata(L, &npc.npc);
+                    bindings.PeerBinding.newUserdata(L, peer);
+                    if (!L.pcall(2, 0)) {
+                        logger.err("result lua on_interact: {s}", .{L.toString(-1)});
+                        return error.LuaError;
+                    }
+                } else {
+                    logger.warn("on_mob_interact is not a function", .{});
+                }
+                L.pop(1);
+                return;
+            }
+        }
     }
 
     pub fn loadScripts(self: *ServerLogic, io: std.Io) !void {
@@ -65,6 +97,7 @@ pub const ServerLogic = struct {
         bindings.MobBinding.bind(self.state);
         bindings.WorldBinding.bind(self.state);
         bindings.RTreeBinding.bind(self.state, self.arena.allocator());
+        bindings.NPCBinding.bind(self.state);
         ServerBinding.bind(self);
     }
 };

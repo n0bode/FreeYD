@@ -43,5 +43,6 @@ function Peer:get_player_mob() end
 ---@overload fun(self: Peer, event: "char_deleted", message: string?, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "char_create_failed", message: string?, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "update_equipments", data: UpdateEquipmentsCommand, opts: SendCommandOptions?) ?string
+---@overload fun(self: Peer, event: "chat_message", data: ChatMessageCommand, opts: SendCommandOptions?) ?string
 ---@return string? error message
 function Peer:send_command(event, data) end

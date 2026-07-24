@@ -28,6 +28,7 @@ const funcs = std.StaticStringMap(CommandFN).initComptime(&.{
     .{ "delete_mob", mobDelete },
     .{ "move_item", itemMove },
     .{ "update_equipments", updateEquipment },
+    .{ "chat_message", chatMessage },
 });
 
 pub fn dispatch(peer: *Peer, command: []const u8, L: *State) bool {
@@ -259,6 +260,25 @@ fn updateEquipment(peer: *Peer, L: *State) void {
     L.pop(1);
 
     var pack = builders.buildUpdateEquipment(mob);
+    peer.sendPacket(&pack) catch {};
+}
+
+fn chatMessage(peer: *Peer, L: *State) void {
+    L.checkType(3, .Table);
+
+    L.getField(3, "mob_id");
+    const mobId = L.checkIntegerT(u16, -1);
+    L.pop(1);
+
+    L.getField(3, "message");
+    const message = L.checkString(-1);
+    L.pop(1);
+
+    L.getField(3, "type");
+    const msgType = L.checkIntegerT(u8, -1);
+    L.pop(1);
+
+    var pack = builders.buildChatMessage(mobId, message, msgType);
     peer.sendPacket(&pack) catch {};
 }
 

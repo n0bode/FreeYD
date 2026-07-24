@@ -31,6 +31,7 @@ pub const Opcode = enum(u16) {
     SET_ATTRIBUTE = 0x277,
     MSG_WHISPER = 0x334,
     TELEPORT = 0x290,
+    MOB_INTERACT = 0x27B,
     MSG_CHAT = 0x333,
 };
 

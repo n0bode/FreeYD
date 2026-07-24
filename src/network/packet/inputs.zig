@@ -17,6 +17,7 @@ pub const PacketData = union(OpcodeFromClient) {
     chatWhisper: PacketChatWhisperInput,
     chatMessage: PacketChatMessageInput,
     teleport: PacketTeleportInput,
+    interactionMob: PacketMobInteractInput,
 };
 
 // This a Packet abstract union received from Client
@@ -72,6 +73,7 @@ pub const OpcodeFromClient = enum(u16) {
     chatWhisper = @intFromEnum(Opcode.MSG_WHISPER),
     chatMessage = @intFromEnum(Opcode.MSG_CHAT),
     teleport = @intFromEnum(Opcode.TELEPORT),
+    interactionMob = @intFromEnum(Opcode.MOB_INTERACT),
 
     // parse a u16 code to a struct union with correct data
     pub fn parse(code: u16) OpcodeFromClient {
@@ -165,6 +167,11 @@ pub const PacketUpdateAttribute = extern struct {
 pub const PacketChatWhisperInput = extern struct {
     name: [16]u8,
     message: [100]u8,
+};
+
+pub const PacketMobInteractInput = extern struct {
+    mobId: u16,
+    action: u16,
 };
 
 const t = std.testing;

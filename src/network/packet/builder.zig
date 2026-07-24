@@ -104,3 +104,19 @@ pub fn buildUpdateEquipment(
         .anctCode = mob.anctCode,
     };
 }
+
+pub fn buildChatMessage(
+    mobId: u16,
+    message: []const u8,
+    _: u8,
+) packets.PacketMessageTextOutput {
+    var self = packets.PacketMessageTextOutput{
+        .header = .{
+            .operationCode = @intFromEnum(Opcode.MSG_CHAT),
+            .index = mobId,
+        },
+    };
+    const len = @min(self.text.len, message.len);
+    @memcpy(self.text[0..len], message[0..len]);
+    return self;
+}

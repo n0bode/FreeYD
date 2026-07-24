@@ -1,9 +1,11 @@
 local server = require("server");
+local logger = require("logger");
 
 server:create_npc {
     name = "Treiner",
     position = { x = 2112, y = 2042 },
     on_interact = function(npc, peer)
+        logger:info("Player " .. peer.peer_id .. " interacted with NPC " .. npc.name)
         peer:send_text("Hello, I am the " .. npc.name .. ". I can help you train your skills.")
     end,
     equipments = {
@@ -26,7 +28,11 @@ server:create_npc {
     name = "Guarda",
     position = { x = 2114, y = 2080 },
     on_interact = function(npc, peer)
-        peer:send_text("Hello, I am the " .. npc.name .. ". I can help you train your skills.")
+        peer:send_command("chat_message", {
+            mob_id = npc.id,
+            type = 0,
+            message = "Hello, I am the " .. npc.name .. ". I can help you with your quests.",
+        })
     end,
     equipments = {
         [EquipmentSlot.face] = Item.new(60),    -- Example item ID for face equipment

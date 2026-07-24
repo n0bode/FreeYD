@@ -606,8 +606,44 @@ pub const State = struct {
         return @intCast(c.luaL_checkinteger(self.L, idx));
     }
 
+    pub fn checkIntegerT(self: State, comptime T: type, idx: i32) T {
+        return @intCast(c.luaL_checkinteger(self.L, idx));
+    }
+
     pub fn checkNumber(self: State, idx: i32) f64 {
         return @floatCast(c.luaL_checknumber(self.L, idx));
+    }
+
+    pub fn isBoolean(self: State, idx: i32) bool {
+        return self.getLuaType(idx) == .Bool;
+    }
+
+    pub fn isNumber(self: State, idx: i32) bool {
+        return self.getLuaType(idx) == .Number;
+    }
+
+    pub fn isString(self: State, idx: i32) bool {
+        return self.getLuaType(idx) == .String;
+    }
+
+    pub fn isFunction(self: State, idx: i32) bool {
+        return self.getLuaType(idx) == .Function;
+    }
+
+    pub fn isTable(self: State, idx: i32) bool {
+        return self.getLuaType(idx) == .Table;
+    }
+
+    pub fn isUserdata(self: State, idx: i32) bool {
+        return self.getLuaType(idx) == .Userdata;
+    }
+
+    pub fn isLightUserdata(self: State, idx: i32) bool {
+        return self.getLuaType(idx) == .LightUserdata;
+    }
+
+    pub fn isNone(self: State, idx: i32) bool {
+        return self.getLuaType(idx) == .None;
     }
 };
 

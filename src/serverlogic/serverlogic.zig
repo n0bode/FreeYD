@@ -20,6 +20,7 @@ pub const ServerLogic = struct {
     state: *lua.State,
     world: core.World,
     maxPlayers: usize,
+    group: std.Io.Group,
 
     pub fn init(
         allocator: Allocator,
@@ -36,6 +37,7 @@ pub const ServerLogic = struct {
             .state = L,
             .world = try core.World.init(allocator, maxPlayers),
             .maxPlayers = maxPlayers,
+            .group = .init,
         };
     }
 
@@ -83,9 +85,50 @@ pub const ServerLogic = struct {
         }
     }
 
-    pub fn loadScripts(self: *ServerLogic, io: std.Io) !void {
+    pub fn start(self: *ServerLogic, io: std.Io) !void {
         self.bindLuaTypes();
         try loader.loadScripts(self.arena.allocator(), io, self.state);
+
+        try self.server.listen(io);
+        try self.group.concurrent(io, ServerLogic.loopServer, .{ self, io });
+    }
+
+    pub fn cancel(self: *ServerLogic, io: std.Io) void {
+        self.server.stop(io);
+
+        self.group.cancel(io);
+        self.group.await(io) catch {
+            logger.err("failed to wait stop server", .{});
+        };
+    }
+
+    fn loopServer(self: *ServerLogic, io: std.Io) void {
+        while (self.server.state == .running) {
+            // 24 per second
+            io.sleep(.fromMilliseconds(1000 / 24), .real) catch {
+                logger.warn("canceled wait", .{});
+                return;
+            };
+            const serverTime = self.server.getServerTime();
+
+            self.updateNPCs(serverTime);
+        }
+    }
+
+    fn updateNPCs(self: *ServerLogic, serverTime: u64) void {
+        const L = self.state;
+        for (self.world.npcs.items) |*npc| {
+            L.restoreRegistry(npc.fnUpdate);
+            bindings.NPCBinding.newUserdata(L, &npc.npc);
+            L.pushInteger(@intCast(serverTime));
+            if (!L.pcall(2, 1)) {
+                logger.err("NPC({s}).on_update: failed {s}", .{ npc.npc.name, L.toString(-1) });
+            }
+
+            if (L.isNil(-1) or (L.isBoolean(-1) and L.toBoolean(-1))) {
+                npc.npc.updatedAt = serverTime;
+            }
+        }
     }
 
     fn bindLuaTypes(self: *ServerLogic) void {

@@ -238,6 +238,10 @@ pub fn MapperStructPtr(comptime T: anytype) type {
                                 _ = L.panic("unsupported array type for field: " ++ field.name);
                             }
                         },
+                        .@"struct" => {
+                            // TODO: struct setter
+                            _ = L.panic("unsupported type for field: " ++ field.name);
+                        },
                         else => {
                             _ = L.panic("unsupported type for field: " ++ field.name);
                         },

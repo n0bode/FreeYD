@@ -105,20 +105,14 @@ pub fn main(init: Init) !void {
     defer serverLogic.deinit();
 
     server.setOnReceivePeerMessage(serverlogic.onReceiveMessage, &serverLogic);
-    try serverLogic.loadScripts(init.io);
-    try server.run(init.io);
-
     logger.info("running server on {s}:{d}\n", .{ config.config.host, config.config.port });
-    const delay = std.Io.Duration.fromMilliseconds(10 * 3);
+    try serverLogic.start(init.io);
 
     std.debug.print(">> Ctrl+C: to kill server\n", .{});
     while (running.load(.monotonic)) {
-        try init.io.sleep(delay, .awake);
+        try init.io.sleep(.fromMilliseconds(10), .awake);
     }
-
     std.debug.print("shutting...\n", .{});
-    server.stop(init.io) catch |err| {
-        logger.err("stop server failed: {any}", .{err});
-    };
+    serverLogic.cancel(init.io);
     logger.info("server shutdowned", .{});
 }

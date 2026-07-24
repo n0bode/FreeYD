@@ -85,8 +85,9 @@ pub const World = struct {
         mob.stats.state.merchant = 1;
         npc.npc.id = mob.mobId;
         npc.npc.mob = mob;
-        npc.npc.start_position = position;
-        npc.npc.current_position = npc.npc.start_position;
+        npc.npc.startPosition = position;
+        npc.npc.currentPosition = npc.npc.startPosition;
+        npc.npc.updatedAt = 0;
 
         @memset(npc.npc.name[0..], 0);
         @memcpy(npc.npc.name[0..info.name.len], info.name[0..]);

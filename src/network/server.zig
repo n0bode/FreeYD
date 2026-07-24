@@ -89,7 +89,7 @@ pub const Server = struct {
         self.udOnReceivePeerMessage = userdata;
     }
 
-    pub fn run(self: *Server, io: std.Io) !void {
+    pub fn listen(self: *Server, io: std.Io) !void {
         const address = self.address orelse return;
 
         self.group = .init;
@@ -107,7 +107,7 @@ pub const Server = struct {
         try self.group.concurrent(io, Server.waitAcceptConnect, .{ self, io });
     }
 
-    pub fn stop(self: *Server, io: std.Io) !void {
+    pub fn stop(self: *Server, io: std.Io) void {
         if (self.state == .running) {
             self.state = .disconnecting;
             self.group.cancel(io);
@@ -117,7 +117,9 @@ pub const Server = struct {
             }
             self.state = .disconnected;
         }
-        try self.group.await(io);
+        self.group.await(io) catch {
+            logger.err("failed to stop server", .{});
+        };
     }
 
     fn waitAcceptConnect(self: *Server, io: std.Io) void {
@@ -194,8 +196,8 @@ pub const Server = struct {
         return null;
     }
 
-    pub fn getServerTime(self: *Server) i64 {
-        return Clock.boot.now(self.io).toMilliseconds() - self.startedAt;
+    pub fn getServerTime(self: *Server) u64 {
+        return @intCast(Clock.boot.now(self.io).toMilliseconds() - self.startedAt);
     }
 
     pub fn getLocalDate(self: *Server) std.Io.Timestamp {

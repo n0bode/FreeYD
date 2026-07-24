@@ -1,9 +1,10 @@
 local server = require("server");
 local logger = require("logger");
+local multicast = require("scripts.utils.multicast").multicast
 
 server:create_npc {
-    name = "Treiner",
-    position = { x = 2112, y = 2042 },
+    name = "Treinador",
+    position = { x = 2126, y = 2037 },
     on_interact = function(npc, peer)
         logger:info("Player " .. peer.peer_id .. " interacted with NPC " .. npc.name)
         peer:send_text("Hello, I am the " .. npc.name .. ". I can help you train your skills.")
@@ -18,9 +19,31 @@ server:create_npc {
         [EquipmentSlot.weapon] = Item.new(986), -- Example item ID for weapon equipment
         [EquipmentSlot.cape] = Item.new(543),   -- Example item ID for weapon equipment
     },
-    on_update = function(npc)
-        -- This function is called every server tick to update the NPC's state.
-        -- You can add logic here to make the NPC move, interact with players, etc.
+    on_update = function(npc, server_time)
+        local delta = server_time - npc.updated_at
+        if delta < 10000 then
+            return false
+        end
+
+        local world = server:get_world()
+        local spawned = npc:get_spawned_mob();
+        local start = npc.current_position
+        local dest = { x = npc.start_position.x + math.random(-2, 2), y = npc.start_position.y + math.random(-2, 2) }
+
+        logger:info("npc updated " ..
+            npc.name .. "from (" .. start.x .. ", " .. start.y .. ") to (" .. dest.x .. ", " .. dest.y .. ")")
+        world:move_mob(spawned, dest.x, dest.y)
+        npc.current_position.x = dest.x
+        npc.current_position.y = dest.y
+        multicast(start, dest, function(peer, _, _)
+            peer:send_command("motion_mob", {
+                origin = { x = start.x, y = start.y },
+                kind = 0,
+                speed = 2,
+                mob_id = npc.id,
+                destination = { x = dest.x, y = dest.y },
+            })
+        end)
     end
 }
 

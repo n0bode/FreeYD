@@ -161,7 +161,7 @@ fn lua_get_time(L: *State) i32 {
     };
 
     const time = self.server.getServerTime();
-    L.pushInteger(time);
+    L.pushInteger(@intCast(time));
     return 1;
 }
 

@@ -120,7 +120,7 @@ pub const Peer = struct {
         try writer.flush();
     }
 
-    pub fn getTime(self: *Peer) i64 {
+    pub fn getTime(self: *Peer) u64 {
         return self.server.getServerTime();
     }
 

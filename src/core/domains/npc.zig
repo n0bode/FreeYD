@@ -13,8 +13,9 @@ const Mob = domain.Mob;
 pub const NPC = extern struct {
     id: u16,
     name: [16]u8,
-    current_position: Position,
-    start_position: Position,
+    currentPosition: Position,
+    startPosition: Position,
+    updatedAt: u64,
     mob: *Mob,
 
     pub fn init(id: i32, name: []const u8, start_position: Position, data: Mob) NPC {

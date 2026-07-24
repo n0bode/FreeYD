@@ -32,7 +32,7 @@ pub const CitizenInfo = packed struct(u8) {
     city: Cities = .ARMIA,
 };
 
-pub const Position = packed struct(u32) {
+pub const Position = extern struct {
     x: i16,
     y: i16,
 };

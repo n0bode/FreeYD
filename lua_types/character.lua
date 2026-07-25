@@ -125,6 +125,11 @@ function Character:get_item(storage, slot) end
 ---@return boolean success
 function Character:swap_items(storageDest, slotDest, storageSrc, slotSrc) end
 
+---Swap two items in the character's equipment.
+---@param item Item
+---@return integer if found return slot allocated
+function Character:add_item_on_empty(item) end
+
 ---Return a mob model from the character class.
 ---@return Mob
 function Character:to_mob() end

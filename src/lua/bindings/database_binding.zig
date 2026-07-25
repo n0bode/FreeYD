@@ -70,9 +70,11 @@ fn lua_create_account(L: *State) i32 {
 
     L.getField(2, "username");
     const login = L.toString(-1);
+    L.pop(1);
 
     L.getField(2, "password");
     const password = L.toString(-1);
+    L.pop(1);
 
     var account: Account = undefined;
     if (!self.db.signup(self.io, login, password, &account)) {

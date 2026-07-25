@@ -26,6 +26,7 @@ const nameEventsMap = std.EnumArray(Opcodes, ?[]const u8).init(.{
     .chatMessage = "on_chat_message",
     .teleport = "on_teleport",
     .interactionMob = "on_interact_mob",
+    .dropItem = "on_drop_item",
 });
 
 pub const Dispatcher = struct {

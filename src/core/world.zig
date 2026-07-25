@@ -37,15 +37,14 @@ pub const World = struct {
     pub fn init(child_allocator: Allocator, maxPlayers: usize) !World {
         var self: World = undefined;
         self.arena = std.heap.ArenaAllocator.init(child_allocator);
-        const allocator = self.arena.allocator();
 
         self.maxPlayers = maxPlayers;
         // map size
-        self.treeMobs = MobQuadTree.init(allocator, 4096);
+        self.treeMobs = MobQuadTree.init(child_allocator, 4096);
         // init with 1000 mobs
         // important: more mobs, needs heap invoke commands
-        self.mobs = try .initCapacity(allocator, 1000);
-        self.npcs = try .initCapacity(allocator, 100);
+        self.mobs = try .initCapacity(child_allocator, 1000);
+        self.npcs = try .initCapacity(child_allocator, 100);
         return self;
     }
 

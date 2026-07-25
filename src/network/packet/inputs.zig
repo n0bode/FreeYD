@@ -18,6 +18,7 @@ pub const PacketData = union(OpcodeFromClient) {
     chatMessage: PacketChatMessageInput,
     teleport: PacketTeleportInput,
     interactionMob: PacketMobInteractInput,
+    dropItem: PacketDropItemInput,
 };
 
 // This a Packet abstract union received from Client
@@ -74,6 +75,7 @@ pub const OpcodeFromClient = enum(u16) {
     chatMessage = @intFromEnum(Opcode.MSG_CHAT),
     teleport = @intFromEnum(Opcode.TELEPORT),
     interactionMob = @intFromEnum(Opcode.MOB_INTERACT),
+    dropItem = @intFromEnum(Opcode.DROP_ITEM),
 
     // parse a u16 code to a struct union with correct data
     pub fn parse(code: u16) OpcodeFromClient {
@@ -87,8 +89,8 @@ pub const OpcodeFromClient = enum(u16) {
 };
 
 pub const StorageType = enum(u8) {
-    INVENTORY = 0,
-    EQUIPMENT = 1,
+    EQUIPMENT = 0,
+    INVENTORY = 1,
     WAREHOUSE = 2,
 };
 
@@ -150,6 +152,14 @@ pub const PacketCharDeleteInput = extern struct {
     slot: i32,
     name: [16]u8,
     password: [12]u8,
+};
+
+pub const PacketDropItemInput = extern struct {
+    storage: i32,
+    slot: i32,
+    rotation: PositionData,
+    position: PositionData,
+    itemID: u16,
 };
 
 pub const SectionAttribute = enum(u16) {

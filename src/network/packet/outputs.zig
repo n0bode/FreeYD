@@ -503,3 +503,12 @@ pub const PacketUpdateEquipmentOutput = extern struct {
     equipments: [16]MobItem,
     anctCode: [16]u8,
 };
+
+pub const PacketDropItemOutput = extern struct {
+    header: Header,
+    sourceType: u32,
+    slot: u32,
+    rotation: PositionData,
+    position: PositionData,
+    itemID: u16,
+};

@@ -94,28 +94,11 @@ test "toSnakeCase" {
 
 pub fn walkGeneratorMTS(comptime T: anytype, L: *State) void {
     switch (@typeInfo(T)) {
-        .@"enum" => |u| {
-            const enumType = u.tag_type;
-            if (enumType == void) return;
-            if (@typeInfo(enumType) != .int) return;
-
-            const name = @typeName(T);
-            const lastDot = std.mem.lastIndexOf(u8, name, ".");
-            const enumName = if (lastDot) |idx| name[(idx + 1)..] else name;
-
-            L.newTable();
-            inline for (std.meta.fields(T)) |field| {
-                L.pushInteger(field.value);
-                L.setField(-2, field.name);
-            }
-            L.setGlobal(enumName);
-        },
         .@"struct" => {
             MapperStructPtr(T).bind(L);
             inline for (std.meta.fields(T)) |field| {
                 switch (@typeInfo(field.type)) {
                     .@"struct" => walkGeneratorMTS(field.type, L),
-                    .@"enum" => walkGeneratorMTS(field.type, L),
                     else => {},
                 }
             }
@@ -143,6 +126,7 @@ pub fn EnumMapper(comptime T: anytype) type {
                     inline for (std.meta.fields(T)) |field| {
                         L.pushInteger(field.value);
                         L.setField(-2, field.name);
+                        std.debug.print("{s} = {d}\n", .{ field.name, field.value });
                     }
                     L.setGlobal(enumName);
                 },

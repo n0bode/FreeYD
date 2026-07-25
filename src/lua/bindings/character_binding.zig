@@ -65,6 +65,12 @@ pub fn bind(L: *lua.State) void {
                 .func = .{ .func = lua__get_item },
             },
         },
+        .{
+            .name = "add_item_on_empty",
+            .value = .{
+                .func = .{ .func = lua__add_item_on_empty },
+            },
+        },
     });
 
     bindEnums(L);
@@ -185,5 +191,20 @@ fn lua__get_item(L: *lua.State) i32 {
     }
 
     L.pushNil();
+    return 1;
+}
+
+fn lua__add_item_on_empty(L: *lua.State) i32 {
+    const self: *domain.Character = mapper.toUserdata(L, 1) orelse {
+        L.pushString("must be a character instance");
+        return 1;
+    };
+
+    const item = ItemBinding.toUserdata(L, 2) orelse {
+        L.pushString("item must be item instance");
+        return 1;
+    };
+
+    L.pushInteger(@intCast(self.addItemOnEmptySlot(item.*)));
     return 1;
 }

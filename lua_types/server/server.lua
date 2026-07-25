@@ -14,6 +14,7 @@ local Server = {}
 ---@overload fun(self: Server, event: "on_teleport",  handler: fun(peer: Peer, req: TeleportEvent))
 ---@overload fun(self: Server, event: "on_mob_move",  handler: fun(peer: Peer, req: MobMotionEvent))
 ---@overload fun(self: Server, event: "on_move_item",  handler: fun(peer: Peer, req: MoveItemEvent))
+---@overload fun(self: Server, event: "on_drop_item",  handler: fun(peer: Peer, req: DropItemEvent))
 ---@overload fun(self: Server, event: "on_login", handler: fun(peer: Peer, req: LoginEvent): boolean)
 ---@param event string Event name
 ---@param handler fun(peer: Peer, req: any) Callback invoked when the event fires

@@ -193,4 +193,19 @@ pub const Character = extern struct {
         srcItem.* = temp;
         return true;
     }
+
+    pub fn findEmptyInventorySlot(self: *Character) ?u8 {
+        for (self.carry, 0..) |slot, i| {
+            if (slot.itemID == 0) {
+                return @intCast(i);
+            }
+        }
+        return null;
+    }
+
+    pub fn addItemOnEmptySlot(self: *Character, item: Item) i16 {
+        const slot = self.findEmptyInventorySlot() orelse return -1;
+        self.carry[slot] = item;
+        return slot;
+    }
 };

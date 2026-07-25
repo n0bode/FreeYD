@@ -89,8 +89,8 @@ AttributeSection = {
 
 ---@enum StorageType
 StorageType = {
-    INVENTORY = 0,
-    EQUIPMENT = 1,
+    EQUIPMENT = 0,
+    INVENTORY = 1,
     CARGO = 2,
 }
 
@@ -100,3 +100,11 @@ StorageType = {
 ---@field dest_slot integer
 ---@field source_storage StorageType
 ---@field source_slot integer
+
+---@class DropItemEvent
+---@field header Header
+---@field storage StorageType
+---@field slot integer
+---@field rotation Position
+---@field position Position
+---@field item_id integer

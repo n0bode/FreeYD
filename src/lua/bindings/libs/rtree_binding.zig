@@ -58,14 +58,20 @@ fn toRect(L: *lua.State, idx: i32) RTree.Rect {
     L.checkType(idx, .Table);
 
     L.getField(idx, "x");
-    const x = L.toInteger(-1);
+    const x = L.checkInteger(-1);
+    L.pop(1);
+
     L.getField(idx, "y");
-    const y = L.toInteger(-1);
+    const y = L.checkInteger(-1);
+    L.pop(1);
+
     L.getField(idx, "w");
-    const w = L.toInteger(-1);
+    const w = L.checkInteger(-1);
+    L.pop(1);
+
     L.getField(idx, "h");
-    const h = L.toInteger(-1);
-    L.pop(4);
+    const h = L.checkInteger(-1);
+    L.pop(1);
     return .{ .x = x, .y = y, .w = w, .h = h };
 }
 

@@ -59,3 +59,11 @@ ChatType = {
 ---@field message string
 ---@field type ChatType
 ---@field mob_id integer mob id / peer id
+
+
+---@class DropItemCommand
+---@field storage StorageType
+---@field slot integer
+---@field rotation Position
+---@field position Position
+---@field item_id integer

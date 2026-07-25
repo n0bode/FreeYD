@@ -1,6 +1,9 @@
 local server = require("server");
 local logger = require("logger");
 
+for key, value in pairs(StorageType) do
+    logger:info("StorageType[" .. key .. "] = " .. value)
+end
 server:on("on_chat_whisper", function(peer, req)
     logger:info("(" .. peer.peer_id .. ")[" .. req.name .. "]: " .. req.message)
 
@@ -9,6 +12,71 @@ server:on("on_chat_whisper", function(peer, req)
             local datetime = server:get_local_date();
             local date = "" .. os.date("!%d-%m-%Y %H:%M:%S", datetime)
             peer:send_text(date)
+        end,
+        ["set_equip"] = function()
+            local args = req.message:gmatch("%S+")
+            local slot = tonumber(args()) or 0
+            local item_id = tonumber(args()) or 0
+
+            local account = peer.account
+            local char = account:get_current_char()
+            if not char then
+                logger:error("Character not found for peer " .. peer.peer_id)
+                peer:disconnect()
+                return
+            end
+
+            local attrs = {}
+            if slot == 14 then
+                attrs = {
+                    { index = 0, value = 100 },
+                    { index = 0, value = 100 },
+                    { index = 0, value = 100 },
+                }
+            end
+
+            local item = Item.new(item_id, unpack(attrs))
+            char:set_equipment(slot, item)
+            peer:send_text("Item added to slot " .. slot)
+            account:save(server:get_database())
+            peer:send_command("move_item", {
+                mob_id = peer.peer_id,
+                item = item,
+                storage = StorageType.EQUIPMENT,
+                slot = slot,
+            })
+            peer:send_command("update_equipments", {
+                mob = char:to_mob(),
+            })
+        end,
+        ["add_item"] = function()
+            local args = string.gmatch(req.message, "%S+")
+            local item_id = tonumber(args()) or 0
+            if item_id == 0 then
+                peer:send_text("Invalid item_id")
+                return
+            end
+
+            local account = peer.account
+            local char = account:get_current_char()
+            if not char then
+                logger:error("Character not found for peer " .. peer.peer_id)
+                peer:disconnect()
+                return
+            end
+
+            local item = Item.new(item_id)
+            local slot = char:add_item_on_empty(item)
+            if slot >= 0 then
+                peer:send_text("Item added to slot " .. slot)
+                account:save(server:get_database())
+                peer:send_command("move_item", {
+                    mob_id = peer.peer_id,
+                    item = item,
+                    storage = StorageType.INVENTORY,
+                    slot = slot,
+                })
+            end
         end,
         ["tp"] = function()
             local args = string.gmatch(req.message, "%S+")

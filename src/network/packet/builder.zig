@@ -120,3 +120,24 @@ pub fn buildChatMessage(
     @memcpy(self.text[0..len], message[0..len]);
     return self;
 }
+
+pub fn buildItemDrop(
+    mobId: u16,
+    storage: u32,
+    slot: u32,
+    position: Position,
+    rotation: Position,
+    itemId: u16,
+) packets.PacketDropItemOutput {
+    return packets.PacketDropItemOutput{
+        .header = .{
+            .operationCode = @intFromEnum(Opcode.DROP_ITEM),
+            .index = mobId,
+        },
+        .itemID = itemId,
+        .position = @bitCast(position),
+        .rotation = @bitCast(rotation),
+        .slot = slot,
+        .sourceType = storage,
+    };
+}

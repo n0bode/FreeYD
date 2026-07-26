@@ -21,18 +21,15 @@ server:create_npc {
     },
     on_update = function(npc, server_time)
         local delta = server_time - npc.updated_at
-        if delta < 10000 then
+        if delta < 1000000 then
             return false
         end
 
         local world = server:get_world()
-        local spawned = npc:get_spawned_mob();
         local start = npc.current_position
         local dest = { x = npc.start_position.x + math.random(-2, 2), y = npc.start_position.y + math.random(-2, 2) }
 
-        logger:info("npc updated " ..
-            npc.name .. "from (" .. start.x .. ", " .. start.y .. ") to (" .. dest.x .. ", " .. dest.y .. ")")
-        world:move_mob(spawned, dest.x, dest.y)
+        world:move(npc.id, dest.x, dest.y)
         npc.current_position.x = dest.x
         npc.current_position.y = dest.y
         multicast(start, dest, function(peer, _, _)

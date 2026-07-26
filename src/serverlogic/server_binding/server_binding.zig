@@ -8,6 +8,8 @@ const network = serverlogic.network;
 const ServerLogic = serverlogic.ServerLogic;
 const DatabaseBinding = bindings.DatabaseBinding;
 const ItemBinding = bindings.ItemBinding;
+const PeerBinding = bindings.PeerBinding;
+const responses = network.responses;
 
 const Database = serverlogic.Database;
 
@@ -97,25 +99,33 @@ pub fn bind(logic: *ServerLogic) void {
             },
         },
         .{
-            .name = "is_player",
+            .name = "spawn_player",
             .value = .{
                 .func = .{
-                    .func = lua__is_player,
+                    .func = lua__spawn_player,
                     .userdata = logic,
                 },
             },
         },
     });
+    setGlobals(L, logic);
+}
+
+fn setGlobals(L: *State, logic: *ServerLogic) void {
+    L.pushInteger(@intCast(logic.maxPlayers));
+    L.setGlobal("MAX_PLAYERS");
+
+    L.pushFunction(lua__is_player);
+    L.setGlobal("is_player");
 }
 
 fn lua__is_player(L: *State) i32 {
-    const self: *ServerLogic = L.toUserdata(ServerLogic, L.upValueIndex(2)) orelse {
-        L.pushNil();
-        return 1;
-    };
+    L.getGlobal("MAX_PLAYERS");
+    const maxPlayers = L.toInteger(u32, -1);
+    L.pop(1);
 
-    const peerId = L.checkInteger(2);
-    L.pushBool(peerId < self.maxPlayers);
+    const peerId = L.checkInteger(i32, 1);
+    L.pushBool(peerId > 0 and peerId < maxPlayers);
     return 1;
 }
 
@@ -192,7 +202,7 @@ fn lua_get_peer(L: *State) i32 {
         return 1;
     };
 
-    const peerId = L.checkInteger(-1);
+    const peerId = L.checkInteger(i32, -1);
     if (self.server.peers[@intCast(peerId)]) |peer| {
         bindings.PeerBinding.newUserdata(L, peer);
     } else {
@@ -242,13 +252,14 @@ fn lua_create_npc(L: *State) i32 {
     if (!L.isNil(-1)) {
         L.pushNil();
         while (L.next(-2)) {
-            const index = L.checkInteger(-2);
+            const index = L.checkInteger(usize, -2);
             const item = ItemBinding.toUserdata(L, -1) orelse {
                 return L.panic("equipment must be item");
             };
-            equipments[@as(usize, @intCast(index))] = item.*;
+            equipments[index] = item.*;
             L.pop(1);
         }
+        L.pop(1);
     }
 
     _ = self.world.createNPC(.{
@@ -259,6 +270,78 @@ fn lua_create_npc(L: *State) i32 {
         .onInteract = onInteractRegId,
     }) catch {
         return L.panic("failed to create NPC: ");
+    };
+    L.pushNil();
+    return 1;
+}
+
+fn lua__spawn_player(L: *State) i32 {
+    const self: *ServerLogic = L.toUserdata(ServerLogic, L.upValueIndex(2)) orelse {
+        L.pushString("missing server argument");
+        return 1;
+    };
+
+    const peer = PeerBinding.toUserdata(L, 2) orelse {
+        L.pushString("missing peer argument");
+        return 1;
+    };
+
+    const charSlot = L.checkInteger(i8, 3);
+    const x = L.checkInteger(i16, 4);
+    const y = L.checkInteger(i16, 5);
+
+    const account = &peer.account;
+    if (charSlot < 0 or charSlot >= account.characters.len) {
+        L.pushString("slot is invalid, must be 0-3");
+        return 1;
+    }
+
+    const char: *Character = @constCast(&account.characters[@intCast(charSlot)]);
+    account.charSelected = @intCast(charSlot);
+    const state = &peer.playerState;
+
+    state.mob = char.toMob();
+    state.mob.mobId = @intCast(peer.peerId);
+
+    const peerId: u16 = @intCast(peer.peerId);
+
+    const obj = self.world.spawnMobWithId(&state.mob, @intCast(peerId), x, y) catch {
+        L.pushString("spawn in world invalid");
+        return 1;
+    };
+    state.mobPoint = &obj.point;
+
+    peer.sendPacket(@constCast(
+        &responses.PacketCharSpawnOutput{
+            .header = .{
+                .index = peerId,
+                .operationCode = @intFromEnum(responses.Opcode.CHAR_SPAWNED),
+                .time = @intCast(self.server.getServerTime()),
+            },
+            .character = .from(peerId, char),
+            .position = .{ .x = x, .y = y },
+        },
+    )) catch {
+        _ = state.mobPoint.?.remove();
+        L.pushString("failed to send spawn mob packet");
+        return 1;
+    };
+
+    peer.sendPacket(@constCast(
+        &responses.PacketSpawnOutput{
+            .header = .{
+                .index = peerId,
+                .operationCode = @intFromEnum(responses.Opcode.MOB_CREATE),
+                .time = @intCast(self.server.getServerTime()),
+            },
+            .ownerId = peerId,
+            .mob = .from(&state.mob),
+            .position = .{ .x = x, .y = y },
+        },
+    )) catch {
+        _ = state.mobPoint.?.remove();
+        L.pushString("failed to send spawn mob packet");
+        return 1;
     };
     L.pushNil();
     return 1;

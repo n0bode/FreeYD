@@ -97,7 +97,7 @@ fn lua__set_equipment(L: *lua.State) i32 {
         return 1;
     };
 
-    const slot = L.checkInteger(2);
+    const slot = L.checkInteger(u8, 2);
     _ = std.enums.fromInt(domain.EquipmentSlot, slot) orelse {
         L.pushString("slot invalid");
         return 1;
@@ -119,7 +119,7 @@ fn lua__get_equipment(L: *lua.State) i32 {
         return 1;
     };
 
-    const slot = L.checkInteger(2);
+    const slot = L.checkInteger(u8, 2);
     _ = std.enums.fromInt(domain.EquipmentSlot, slot) orelse {
         L.pushString("slot invalid");
         return 1;
@@ -154,19 +154,19 @@ fn lua__swap_items(L: *lua.State) i32 {
         return 1;
     };
 
-    const destStorage = std.enums.fromInt(domain.StorageType, L.checkInteger(2)) orelse {
+    const destStorage = std.enums.fromInt(domain.StorageType, L.checkInteger(u8, 2)) orelse {
         L.pushString("dest storage invalid");
         return 1;
     };
-    const destSlot = L.checkInteger(3);
+    const destSlot = L.checkInteger(u8, 3);
 
-    const srcStorage = std.enums.fromInt(domain.StorageType, L.checkInteger(4)) orelse {
+    const srcStorage = std.enums.fromInt(domain.StorageType, L.checkInteger(u8, 4)) orelse {
         L.pushString("src storage invalid");
         return 1;
     };
-    const srcSlot = L.checkInteger(5);
+    const srcSlot = L.checkInteger(u8, 5);
 
-    L.pushBool(self.swapItems(destStorage, @intCast(destSlot & 0xFF), srcStorage, @intCast(srcSlot & 0xFF)));
+    L.pushBool(self.swapItems(destStorage, destSlot, srcStorage, srcSlot));
     return 1;
 }
 
@@ -176,13 +176,13 @@ fn lua__get_item(L: *lua.State) i32 {
         return 1;
     };
 
-    const storage = std.enums.fromInt(domain.StorageType, L.checkInteger(2)) orelse {
+    const storage = std.enums.fromInt(domain.StorageType, L.checkInteger(u8, 2)) orelse {
         L.pushString("dest storage invalid");
         return 1;
     };
-    const slot = L.checkInteger(3);
+    const slot = L.checkInteger(u8, 3);
 
-    if (self.getItem(storage, @intCast(slot & 0xFF))) |item| {
+    if (self.getItem(storage, slot)) |item| {
         const ptr = L.newUserdata(domain.Item);
         ptr.* = item;
 

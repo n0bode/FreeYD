@@ -34,6 +34,7 @@ pub const Opcode = enum(u16) {
     MOB_INTERACT = 0x27B,
     MSG_CHAT = 0x333,
     DROP_ITEM = 0x272,
+    CREATE_ITEM = 0x26E,
 };
 
 // important to encrypt and decrypt message from client and to client

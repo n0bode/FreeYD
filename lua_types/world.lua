@@ -16,18 +16,34 @@ function World:each_mobs(func) end
 
 ---get all mobs within area
 ---@param area QueryArea
----@param func fun(pMob: SpawnedMob)
----@return Mob[]
+---@param func fun(mob: Mob, position: Position)
 function World:each_mobs_in_area(area, func) end
 
----add new mob
+---add spawn new mob in world
 ---@param mob Mob
 ---@param x integer
 ---@param y integer
-function World:create_mob(x, y, mob) end
+function World:spawn_mob(mob, x, y) end
 
----move mob
----@param mob_spawned SpawnedMob
+---add spawn new item in world
+---@param item Item
 ---@param x integer
 ---@param y integer
-function World:move_mob(mob_spawned, x, y) end
+function World:spawn_item(item, x, y) end
+
+---move object in world
+---@param id integer
+---@param x integer
+---@param y integer
+---@return boolean
+function World:move(id, x, y) end
+
+---get position object in world
+---@param id integer
+---@return Position?
+function World:get_position(id) end
+
+---remove object in the world
+---@param id integer
+---@return boolean
+function World:remove(id) end

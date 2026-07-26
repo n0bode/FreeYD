@@ -25,8 +25,13 @@ function Peer:associate(account) end
 function Peer:disconnect() end
 
 ---Get current mob peer
----@return SpawnedMob
+---@return Mob
 function Peer:get_player_mob() end
+
+---Check if another peer is the same as this peer
+---@param another Peer
+---@return boolean
+function Peer:is_mine(another) end
 
 ---@class SendCommandOptions
 ---@field peer_id integer overload peer_id event, used when command from another peer
@@ -45,5 +50,6 @@ function Peer:get_player_mob() end
 ---@overload fun(self: Peer, event: "update_equipments", data: UpdateEquipmentsCommand, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "chat_message", data: ChatMessageCommand, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "drop_item", data: DropItemCommand, opts: SendCommandOptions?) ?string
+---@overload fun(self: Peer, event: "create_item", data: CreateItemCommand, opts: SendCommandOptions?) ?string
 ---@return string? error message
 function Peer:send_command(event, data) end

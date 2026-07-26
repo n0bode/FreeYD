@@ -2,17 +2,14 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const BoundedArray = @import("../utils.zig").BoundedArray;
 
-pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
+pub fn QuadTree(capacity: comptime_int) type {
     return struct {
         const Self = @This();
 
         pub const Point = struct {
             x: i64,
             y: i64,
-
-            data: T,
             node: ?*Node = null,
-
             pub fn remove(self: *Point) bool {
                 if (self.node) |node| {
                     return node.remove(self);
@@ -83,6 +80,7 @@ pub fn QuadTree(comptime T: anytype, capacity: comptime_int) type {
                 self.items.push(pos) catch {
                     return false;
                 };
+                std.log.info("inserted({d},{d})", .{ pos.x, pos.y });
                 pos.node = self;
 
                 return true;

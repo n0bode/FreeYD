@@ -53,36 +53,41 @@ pub const ServerLogic = struct {
         if (message) |input| {
             switch (input.data) {
                 .interactionMob => |req| {
-                    self.callMobInteract(peer, req.mobId) catch {
-                        logger.err("Error calling mob interact", .{});
-                    };
+                    self.callInteract(peer, req.mobId);
                 },
                 else => {},
             }
         }
-
         return self.dispatcher.dispatch(self.state, peer, message);
     }
 
-    fn callMobInteract(self: *ServerLogic, peer: *network.Peer, mobId: u32) !void {
-        for (self.world.npcs.items) |*npc| {
-            if (npc.npc.id == mobId) {
-                const L = self.state;
-                L.restoreRegistry(npc.fnInteract);
-                if (L.isFunction(-1)) {
-                    bindings.NPCBinding.newUserdata(L, &npc.npc);
-                    bindings.PeerBinding.newUserdata(L, peer);
-                    if (!L.pcall(2, 0)) {
-                        logger.err("result lua on_interact: {s}", .{L.toString(-1)});
-                        return error.LuaError;
-                    }
-                } else {
-                    logger.warn("on_mob_interact is not a function", .{});
-                }
-                L.pop(1);
+    fn callInteract(self: *ServerLogic, peer: *network.Peer, mobId: u16) void {
+        const obj = self.world.get(mobId) catch {
+            return;
+        };
+
+        switch (obj.entity) {
+            .npc => |npc| {
+                execNPCInteract(self, npc, peer);
+            },
+            else => logger.warn("mobId {d} is not an NPC", .{mobId}),
+        }
+    }
+
+    fn execNPCInteract(self: *ServerLogic, npc: *core.NPC, peer: *network.Peer) void {
+        const L = self.state;
+        L.restoreRegistry(npc.regOnInteract);
+        if (L.isFunction(-1)) {
+            bindings.NPCBinding.newUserdata(L, npc);
+            bindings.PeerBinding.newUserdata(L, peer);
+            if (!L.pcall(2, 0)) {
+                logger.err("NPC({s}): on_interact failed => {s}", .{ npc.name, L.toString(-1) });
                 return;
             }
+        } else {
+            logger.warn("NPC({s}): interacter is not a function", .{npc.name});
         }
+        L.pop(1);
     }
 
     pub fn start(self: *ServerLogic, io: std.Io) !void {
@@ -111,22 +116,22 @@ pub const ServerLogic = struct {
             };
             const serverTime = self.server.getServerTime();
 
-            self.updateNPCs(serverTime);
+            self.execNPCUpdate(serverTime);
         }
     }
 
-    fn updateNPCs(self: *ServerLogic, serverTime: u64) void {
+    fn execNPCUpdate(self: *ServerLogic, serverTime: u64) void {
         const L = self.state;
         for (self.world.npcs.items) |*npc| {
-            L.restoreRegistry(npc.fnUpdate);
-            bindings.NPCBinding.newUserdata(L, &npc.npc);
+            L.restoreRegistry(npc.regOnUpdate);
+            bindings.NPCBinding.newUserdata(L, npc);
             L.pushInteger(@intCast(serverTime));
             if (!L.pcall(2, 1)) {
-                logger.err("NPC({s}).on_update: failed {s}", .{ npc.npc.name, L.toString(-1) });
+                logger.err("NPC({s}).on_update: failed {s}", .{ npc.name, L.toString(-1) });
             }
 
             if (L.isNil(-1) or (L.isBoolean(-1) and L.toBoolean(-1))) {
-                npc.npc.updatedAt = serverTime;
+                npc.updatedAt = serverTime;
             }
             L.pop(1);
         }

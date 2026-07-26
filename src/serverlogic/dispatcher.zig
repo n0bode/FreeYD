@@ -84,23 +84,25 @@ pub const Dispatcher = struct {
             return true;
         };
 
+        var count: u32 = 0;
         L.restoreRegistry(funcRegId);
         if (L.isNil(-1)) {
             return true;
         }
-
+        count += 1;
         bindings.PeerBinding.newUserdata(L, peer);
         if (message) |packet| {
+            count += 1;
             bindings.PacketBinder.newUserdata(L, packet);
-        } else {
-            L.pushNil();
         }
-        if (!L.pcall(2, 1)) {
+        if (!L.pcall(count, 1)) {
             logger.err("failed to call event {s}: {s}", .{ eventName, L.toString(-1) });
         }
+        defer L.pop(1);
 
-        if (L.getLuaType(-1) == .Bool)
+        if (L.getLuaType(-1) == .Bool) {
             return L.toBoolean(-1);
+        }
         return true;
     }
 };

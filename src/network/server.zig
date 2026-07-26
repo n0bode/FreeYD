@@ -176,6 +176,7 @@ pub const Server = struct {
 
     fn clearSlot(self: *Server, peerId: usize) void {
         if (self.peers[peerId]) |peer| {
+            logger.debug("destroy peer({d})", .{peerId});
             self.peers[peerId] = null;
             peer.deinit(self.io);
             self.allocator.destroy(peer);
@@ -215,8 +216,10 @@ pub const Server = struct {
         logger.info("user({d}): handle event {s}", .{ peer.peerId, @tagName(state) });
         switch (state) {
             .Disconnected => {
-                if (self.fnOnReceivePeerMessage) |callback| {
-                    _ = callback(self.udOnReceivePeerMessage, peer, null);
+                if (peer.state == .Logged) {
+                    if (self.fnOnReceivePeerMessage) |callback| {
+                        _ = callback(self.udOnReceivePeerMessage, peer, null);
+                    }
                 }
                 self.clearSlot(peer.peerId);
             },

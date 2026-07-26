@@ -58,19 +58,19 @@ fn toRect(L: *lua.State, idx: i32) RTree.Rect {
     L.checkType(idx, .Table);
 
     L.getField(idx, "x");
-    const x = L.checkInteger(-1);
+    const x = L.checkInteger(i64, -1);
     L.pop(1);
 
     L.getField(idx, "y");
-    const y = L.checkInteger(-1);
+    const y = L.checkInteger(i64, -1);
     L.pop(1);
 
     L.getField(idx, "w");
-    const w = L.checkInteger(-1);
+    const w = L.checkInteger(i64, -1);
     L.pop(1);
 
     L.getField(idx, "h");
-    const h = L.checkInteger(-1);
+    const h = L.checkInteger(i64, -1);
     L.pop(1);
     return .{ .x = x, .y = y, .w = w, .h = h };
 }
@@ -112,10 +112,10 @@ fn lua__rtree_insert(L: *lua.State) i32 {
         return 1;
     };
 
-    const x = L.checkInteger(2);
-    const y = L.checkInteger(3);
-    const w = L.checkInteger(4);
-    const h = L.checkInteger(5);
+    const x = L.checkInteger(i64, 2);
+    const y = L.checkInteger(i64, 3);
+    const w = L.checkInteger(i64, 4);
+    const h = L.checkInteger(i64, 5);
 
     L.pushValue(4);
     const reg = L.saveRegistry(-1);
@@ -132,8 +132,8 @@ fn lua__rtree_query_at(L: *lua.State) i32 {
         return L.panic("must be method");
     };
 
-    const x = L.checkInteger(2);
-    const y = L.checkInteger(3);
+    const x = L.checkInteger(i64, 2);
+    const y = L.checkInteger(i64, 3);
     L.pushValue(4);
     L.pushBool(qt.queryAt(@intCast(x), @intCast(y), L, fn_query_at));
     return 1;

@@ -1,7 +1,13 @@
 pub const domains = @import("domains/domains.zig");
-const QuadTree = @import("utils").QuadTree;
 
-pub const MobQuadTree = QuadTree(*domains.Mob, 10);
-pub const World = @import("world.zig").World;
-pub const SpawnedMob = @import("world.zig").SpawnedMob;
-pub const SpawnedNPC = @import("world.zig").SpawnedNPC;
+// max players nears
+pub const WorldTree = @import("utils").QuadTree(20);
+// position mob/npc/items in world
+pub const Point = WorldTree.Point;
+
+const world = @import("world/world.zig");
+pub const World = world.World;
+pub const Object = world.Object;
+
+pub const NPC = domains.NPC;
+pub const Mob = domains.Mob;

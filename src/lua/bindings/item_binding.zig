@@ -48,7 +48,7 @@ fn lua__new(L: *lua.State) i32 {
     const args: usize = @intCast(L.getTop());
     // heap
 
-    const itemId = L.checkInteger(1);
+    const itemId = L.checkInteger(u16, 1);
     var item = domain.Item{
         .itemID = @intCast(itemId),
     };
@@ -59,11 +59,11 @@ fn lua__new(L: *lua.State) i32 {
 
         L.checkType(idx, .Table);
         L.getField(idx, "index");
-        item.attributes[i - 1].index = @intCast(L.checkInteger(-1));
+        item.attributes[i - 1].index = @intCast(L.checkInteger(u8, -1));
         L.pop(1);
 
         L.getField(idx, "value");
-        item.attributes[i - 1].value = @intCast(L.checkInteger(-1));
+        item.attributes[i - 1].value = @intCast(L.checkInteger(u8, -1));
         L.pop(1);
     }
 

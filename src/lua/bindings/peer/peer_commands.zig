@@ -30,6 +30,7 @@ const funcs = std.StaticStringMap(CommandFN).initComptime(&.{
     .{ "update_equipments", updateEquipment },
     .{ "chat_message", chatMessage },
     .{ "drop_item", dropItem },
+    .{ "create_item", createItem },
 });
 
 pub fn dispatch(peer: *Peer, command: []const u8, L: *State) bool {
@@ -79,7 +80,7 @@ fn mobSpawn(peer: *Peer, L: *State) void {
     L.pop(1);
 
     L.getField(3, "owner_id");
-    const ownerId = L.checkInteger(-1);
+    const ownerId = L.checkInteger(u16, -1);
     L.pop(1);
 
     L.getField(3, "mob");
@@ -89,7 +90,7 @@ fn mobSpawn(peer: *Peer, L: *State) void {
     };
     L.pop(1);
 
-    var packet = builders.buildSpawnMob(&pos, @intCast(ownerId), mob);
+    var packet = builders.buildSpawnMob(&pos, ownerId, mob);
     injectOptions(L, &packet.header);
     peer.sendPacket(&packet) catch {};
 }
@@ -105,11 +106,11 @@ fn mobMove(peer: *Peer, L: *State) void {
     L.pop(1);
 
     L.getField(3, "kind");
-    const kind = L.checkInteger(-1);
+    const kind = L.checkInteger(u8, -1);
     L.pop(1);
 
     L.getField(3, "speed");
-    const speed = L.checkInteger(-1);
+    const speed = L.checkInteger(u8, -1);
     L.pop(1);
 
     L.getField(3, "destination");
@@ -119,15 +120,15 @@ fn mobMove(peer: *Peer, L: *State) void {
     };
 
     L.getField(3, "mob_id");
-    const mobId = L.checkInteger(-1);
+    const mobId = L.checkInteger(u16, -1);
     L.pop(1);
 
     var packet = builders.buildMotionMob(
-        @intCast(mobId),
+        mobId,
         &origin,
         &dest,
-        @intCast(kind),
-        @intCast(speed),
+        kind,
+        speed,
     );
 
     L.getField(3, "routes");
@@ -217,7 +218,7 @@ fn charDeleted(peer: *Peer, _: *State) void {
 fn mobDelete(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
     L.getField(3, "mob_id");
-    const mobId: u16 = @intCast(L.checkInteger(-1));
+    const mobId = L.checkInteger(u16, -1);
     L.pop(1);
     var pack = builders.buildDeleteMob(mobId);
 
@@ -228,15 +229,15 @@ fn itemMove(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
 
     L.getField(3, "storage");
-    const storage: u16 = @intCast(L.checkInteger(-1));
+    const storage = L.checkInteger(u8, -1);
     L.pop(1);
 
     L.getField(3, "slot");
-    const slot: u16 = @intCast(L.checkInteger(-1));
+    const slot = L.checkInteger(u8, -1);
     L.pop(1);
 
     L.getField(3, "mob_id");
-    const mobId: u16 = @intCast(L.checkInteger(-1));
+    const mobId = L.checkInteger(u16, -1);
     L.pop(1);
 
     L.getField(3, "item");
@@ -268,7 +269,7 @@ fn chatMessage(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
 
     L.getField(3, "mob_id");
-    const mobId = L.checkIntegerT(u16, -1);
+    const mobId = L.checkInteger(u16, -1);
     L.pop(1);
 
     L.getField(3, "message");
@@ -276,7 +277,7 @@ fn chatMessage(peer: *Peer, L: *State) void {
     L.pop(1);
 
     L.getField(3, "type");
-    const msgType = L.checkIntegerT(u8, -1);
+    const msgType = L.checkInteger(u8, -1);
     L.pop(1);
 
     var pack = builders.buildChatMessage(mobId, message, msgType);
@@ -287,11 +288,11 @@ fn dropItem(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
 
     L.getField(3, "slot");
-    const slot = L.checkIntegerT(u32, -1);
+    const slot = L.checkInteger(u16, -1);
     L.pop(1);
 
     L.getField(3, "storage");
-    const storage = L.checkIntegerT(u32, -1);
+    const storage = L.checkInteger(u16, -1);
     L.pop(1);
 
     L.getField(3, "position");
@@ -309,14 +310,56 @@ fn dropItem(peer: *Peer, L: *State) void {
     L.pop(1);
 
     L.getField(3, "item_id");
-    const itemId = L.checkIntegerT(u16, -1);
+    const itemId = L.checkInteger(u16, -1);
     L.pop(1);
 
     L.getField(3, "mob_id");
-    const mobId = L.checkIntegerT(u16, -1);
+    const mobId = L.checkInteger(u16, -1);
     L.pop(1);
 
     var pack = builders.buildItemDrop(mobId, storage, slot, position, rotation, itemId);
+    peer.sendPacket(&pack) catch {};
+}
+
+fn createItem(peer: *Peer, L: *State) void {
+    L.checkType(3, .Table);
+
+    L.getField(3, "position");
+    const position = PositionBinding.toUserdata(L, -1) orelse {
+        _ = L.throw("create_item: 'position' must be a Position instance");
+        return;
+    };
+    L.pop(1);
+
+    L.getField(3, "item_id");
+    const itemId = L.checkInteger(u16, -1);
+    L.pop(1);
+
+    L.getField(3, "item");
+    const item = binding.ItemBinding.toUserdata(L, -1) orelse {
+        _ = L.throw("create_item: 'item' must be an Item instance");
+        return;
+    };
+    L.pop(1);
+
+    L.getField(3, "rotate");
+    const rotate = L.checkInteger(u8, -1);
+    L.pop(1);
+
+    L.getField(3, "state");
+    const state = L.checkInteger(u8, -1);
+    L.pop(1);
+
+    L.getField(3, "height");
+    const height = L.checkInteger(u8, -1);
+    L.pop(1);
+
+    L.getField(3, "create");
+    const create = L.checkInteger(u8, -1);
+    L.pop(1);
+
+    var pack = builders.buildItemCreate(position, itemId, item.*, rotate, state, height, create);
+    injectOptions(L, &pack.header);
     peer.sendPacket(&pack) catch {};
 }
 
@@ -324,11 +367,11 @@ fn injectOptions(L: *State, header: *responses.Header) void {
     if (L.getLuaType(4) != .Table) return;
 
     L.getField(4, "peer_id");
-    if (!L.isNil(-1)) header.index = @intCast(L.toInteger(-1));
+    if (!L.isNil(-1)) header.index = L.toInteger(u16, -1);
 
     L.getField(4, "time");
-    if (!L.isNil(-1)) header.time = @intCast(L.toInteger(-1));
+    if (!L.isNil(-1)) header.time = L.toInteger(u32, -1);
 
     L.getField(4, "opcode");
-    if (!L.isNil(-1)) header.operationCode = @intCast(L.toInteger(-1));
+    if (!L.isNil(-1)) header.operationCode = L.toInteger(u16, -1);
 }

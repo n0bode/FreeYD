@@ -37,8 +37,8 @@ pub const Peer = struct {
     };
 
     pub const PlayerState = struct {
-        mob: domain.Mob,
-        spawnedMob: core.SpawnedMob,
+        mob: domain.Mob = .{},
+        mobPoint: ?*core.Point = null,
     };
 
     peerId: u32,
@@ -52,7 +52,7 @@ pub const Peer = struct {
     writer: net.Stream.Writer = undefined,
 
     account: Account = undefined,
-    playerState: ?PlayerState = undefined,
+    playerState: PlayerState,
     server: *Server,
 
     lastReceiveTime: u64 = 0,
@@ -66,6 +66,7 @@ pub const Peer = struct {
             .server = server,
             .peerId = peerId,
             .stream = stream,
+            .playerState = .{},
         };
     }
 

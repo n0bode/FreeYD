@@ -12,7 +12,7 @@ local Server = {}
 ---@overload fun(self: Server, event: "on_chat_message",  handler: fun(peer: Peer, req: ChatMessageEvent))
 ---@overload fun(self: Server, event: "on_chat_whisper",  handler: fun(peer: Peer, req: ChatWhisperEvent))
 ---@overload fun(self: Server, event: "on_teleport",  handler: fun(peer: Peer, req: TeleportEvent))
----@overload fun(self: Server, event: "on_mob_move",  handler: fun(peer: Peer, req: MobMotionEvent))
+---@overload fun(self: Server, event: "on_motion_mob",  handler: fun(peer: Peer, req: MobMotionEvent))
 ---@overload fun(self: Server, event: "on_move_item",  handler: fun(peer: Peer, req: MoveItemEvent))
 ---@overload fun(self: Server, event: "on_drop_item",  handler: fun(peer: Peer, req: DropItemEvent))
 ---@overload fun(self: Server, event: "on_login", handler: fun(peer: Peer, req: LoginEvent): boolean)
@@ -66,9 +66,12 @@ function Server:multicast_command_in_area(event, area, data, opts) end
 ---@param npc_info NPCCreateInfo
 function Server:create_npc(npc_info) end
 
----check if a mob is a player
----@param mob_id integer unique mob_id
----@return boolean true if peer is connected, false otherwise
-function Server:is_player(mob_id) end
+---Spawn the player mob for this peer in the world.
+---@param peer Peer
+---@param slot_id integer The slot ID of the character to spawn.
+---@param x integer The x-coordinate where the mob should be spawned.
+---@param y integer The y-coordinate where the mob should be spawned.
+---@return SpawnedMob
+function Server:spawn_player(peer, slot_id, x, y) end
 
 return Server

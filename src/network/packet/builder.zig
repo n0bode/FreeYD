@@ -77,17 +77,17 @@ pub fn buildMotionMob(
 
 pub fn buildItemMove(
     peerId: u16,
-    storage: u16,
-    slot: u16,
+    storage: u8,
+    slot: u8,
     item: Item,
-) packets.PacketItemCreateOutput {
-    return packets.PacketItemCreateOutput{
+) packets.PacketItemMoveOutput {
+    return packets.PacketItemMoveOutput{
         .header = .{
             .operationCode = @intFromEnum(Opcode.ITEM_MOVED),
             .index = peerId,
         },
-        .storage = storage,
-        .slot = slot,
+        .storage = @intCast(storage),
+        .slot = @intCast(slot),
         .item = @bitCast(item),
     };
 }
@@ -119,6 +119,29 @@ pub fn buildChatMessage(
     const len = @min(self.text.len, message.len);
     @memcpy(self.text[0..len], message[0..len]);
     return self;
+}
+
+pub fn buildItemCreate(
+    position: Position,
+    itemId: u16,
+    item: Item,
+    rotate: u8,
+    state: u8,
+    height: u8,
+    create: u8,
+) packets.PacketItemCreateOutput {
+    return packets.PacketItemCreateOutput{
+        .header = .{
+            .operationCode = @intFromEnum(Opcode.CREATE_ITEM),
+        },
+        .position = @bitCast(position),
+        .itemId = itemId,
+        .item = @bitCast(item),
+        .rotate = rotate,
+        .state = state,
+        .height = height,
+        .create = create,
+    };
 }
 
 pub fn buildItemDrop(

@@ -67,3 +67,12 @@ ChatType = {
 ---@field rotation Position
 ---@field position Position
 ---@field item_id integer
+
+---@class CreateItemCommand
+---@field position Position
+---@field item_id integer
+---@field item Item
+---@field rotate integer
+---@field state integer
+---@field height integer
+---@field create integer

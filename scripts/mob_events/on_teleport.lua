@@ -5,7 +5,7 @@ local rtree = require("rtree")
 
 ---@return Rect
 local function coord(x, y)
-    return { x = x - 4, y = y - 4, w = 8, h = 8 }
+    return { x = x - 3, y = y - 3, w = 6, h = 6 }
 end
 
 local teleports = rtree.new {
@@ -29,15 +29,14 @@ teleports:query_at(0, 0, function(value)
 end)
 
 server:on("on_teleport", function(peer, req)
-    --logger:info("on_teleport = (" .. peer.peer_id .. ")[" .. tonumber(req.data) .. "]:")
-
-    local char = peer:get_player_mob()
-    local origin = { x = char.x, y = char.y };
     local world = server:get_world()
-
-    teleports:query_at(char.x, char.y, function(dest)
-        logger:info("teleport from (" .. origin.x .. "," .. origin.y .. ") to (" .. dest.x .. "," .. dest.y .. ")")
-
+    local origin = world:get_position(peer.peer_id)
+    if not origin then
+        logger:error("peer " .. peer.peer_id .. " has no position")
+        return
+    end
+    teleports:query_at(origin.x, origin.y, function(dest)
+        logger:info(" teleporting from " .. origin.x .. "," .. origin.y .. "to " .. dest.x .. "," .. dest.y)
         peer:send_command("motion_mob", {
             origin = origin,
             kind = 1,
@@ -45,38 +44,45 @@ server:on("on_teleport", function(peer, req)
             mob_id = peer.peer_id,
             destination = dest,
         })
-        multicast(origin, dest, function(another, mob, location)
+
+        multicast(origin, origin, function(another, mob, location)
             logger:info("send to " .. another.peer_id)
 
             -- is mine
-            if another.peer_id == peer.peer_id then
+            if another == peer then
                 return
             end
 
-            if location == 1 then
-                logger:info("delete mob to " .. another.peer_id)
-                another:send_command("delete_mob", {
-                    mob_id = peer.peer_id,
-                })
-                peer:send_command("delete_mob", {
-                    mob_id = another.peer_id,
-                })
-            end
-
-            if location == 2 then
-                another:send_command("spawn_mob", {
-                    position = dest,
-                    owner_id = peer.peer_id,
-                    mob = char.data,
-                })
-
-                peer:send_command("spawn_mob", {
-                    position = { x = mob.x, y = mob.y },
-                    owner_id = another.peer_id,
-                    mob = mob.data,
-                })
-            end
+            logger:info("delete mob to " .. another.peer_id)
+            another:send_command("delete_mob", {
+                mob_id = peer.peer_id,
+            })
+            peer:send_command("delete_mob", {
+                mob_id = another.peer_id,
+            })
         end)
-        world:move_mob(char, dest.x, dest.y)
+
+        local mob_player = peer:get_player_mob()
+
+        multicast(dest, dest, function(another, mob, position, location)
+            logger:info("send to " .. another.peer_id)
+            -- is mine
+            if another == peer then
+                return
+            end
+
+            another:send_command("spawn_mob", {
+                position = dest,
+                owner_id = peer.peer_id,
+                mob = mob_player,
+            })
+
+            peer:send_command("spawn_mob", {
+                position = { x = position.x, y = position.y },
+                owner_id = another.peer_id,
+                mob = mob,
+            })
+        end)
+        world:move(peer.peer_id, dest.x, dest.y)
     end)
 end)

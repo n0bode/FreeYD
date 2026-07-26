@@ -99,9 +99,9 @@ fn lua__create_character(L: *lua.State) i32 {
     };
 
     const name = L.checkString(2);
-    const slotId = L.checkInteger(3);
-    const classInt = L.checkInteger(4);
-    const soulInt = L.checkInteger(5);
+    const slotId = L.checkInteger(u8, 3);
+    const classInt = L.checkInteger(u8, 4);
+    const soulInt = L.checkInteger(u8, 5);
 
     // validations
     if (name.len >= 16) {
@@ -124,7 +124,6 @@ fn lua__create_character(L: *lua.State) i32 {
         return L.throw("builder must a function");
     }
 
-    // heap memory
     const char: *domain.Character = &self.characters[@intCast(slotId)];
     CharacterBinding.newUserdata(L, char);
 
@@ -132,7 +131,7 @@ fn lua__create_character(L: *lua.State) i32 {
     char.* = .empty(class);
     char.accountId = self.accountID;
     char.soul = soul;
-    char.slotId = @intCast(slotId);
+    char.slotId = slotId;
     @memcpy(char.name[0..name.len], name[0..]);
 
     if (!L.isNil(6) and L.getLuaType(6) == .Function) {
@@ -154,7 +153,7 @@ fn lua__get_character(L: *lua.State) i32 {
         return L.throw("function must be called with an account instance");
     };
 
-    const slotId = L.checkInteger(2);
+    const slotId = L.checkInteger(u8, 2);
     if (slotId < 0 or slotId >= 4) {
         return L.throw("slotId must be between 0 and 3");
     }
@@ -181,7 +180,7 @@ fn lua__delete_character(L: *lua.State) i32 {
         return L.throw("function must be called with an account instance");
     };
 
-    const slotId = L.checkInteger(2);
+    const slotId = L.checkInteger(u8, 2);
     if (slotId < 0 or slotId >= 4) {
         return L.throw("slotId must be between 0 and 3");
     }

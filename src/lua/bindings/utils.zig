@@ -168,7 +168,7 @@ pub fn MapperStructPtr(comptime T: anytype) type {
         }
 
         pub fn toUserdata(L: *State, index: i32) ?*T {
-            return (L.toUserdata(*T, index) orelse return null).*;
+            return (L.checkUserdata(*T, index, metatableName) orelse return null).*;
         }
 
         pub fn lua__newindex(L: *State) i32 {
@@ -183,11 +183,11 @@ pub fn MapperStructPtr(comptime T: anytype) type {
                 if (std.mem.eql(u8, snakeName, keyname)) {
                     switch (@typeInfo(field.type)) {
                         .int => {
-                            const value = L.checkInteger(3);
+                            const value = L.checkInteger(i32, 3);
                             @field(self, field.name) = @intCast(value);
                         },
                         .float => {
-                            const value = L.checkNumber(3);
+                            const value = L.checkNumber(f64, 3);
                             @field(self, field.name) = @floatCast(value);
                         },
                         .bool => {
@@ -197,7 +197,7 @@ pub fn MapperStructPtr(comptime T: anytype) type {
                         .@"enum" => |u| {
                             switch (@typeInfo(u.tag_type)) {
                                 .int => {
-                                    const value = L.checkInteger(3);
+                                    const value = L.checkInteger(i32, 3);
                                     @field(self, field.name) = @enumFromInt(value);
                                 },
                                 else => {

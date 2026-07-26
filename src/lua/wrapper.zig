@@ -260,7 +260,13 @@ pub const State = struct {
         return @ptrCast(@alignCast(c.lua_touserdata(self.L, idx)));
     }
 
-    pub fn toInteger(self: State, idx: i32) i64 {
+    pub fn checkUserdata(self: State, comptime T: anytype, idx: i32, mtName: []const u8) ?*T {
+        return @ptrCast(@alignCast(c.luaL_checkudata(self.L, idx, mtName.ptr)));
+    }
+
+    pub fn toInteger(self: State, comptime T: anytype, idx: i32) T {
+        if (@typeInfo(T) != .int)
+            @compileError("checkInteger only supports integer types");
         return @intCast(c.lua_tointeger(self.L, idx));
     }
 
@@ -306,6 +312,10 @@ pub const State = struct {
 
     pub fn removeRegistry(self: State, regId: i32) void {
         c.luaL_unref(self.L, c.LUA_REGISTRYINDEX, regId);
+    }
+
+    pub fn isType(self: State, idx: i32, luaType: LuaType) bool {
+        return self.getLuaType(idx) == luaType;
     }
 
     pub fn getMetatableByName(self: State, name: []const u8) void {
@@ -602,15 +612,15 @@ pub const State = struct {
         return text[0..size];
     }
 
-    pub fn checkInteger(self: State, idx: i32) i64 {
+    pub fn checkInteger(self: State, comptime T: anytype, idx: i32) T {
+        if (@typeInfo(T) != .int)
+            @compileError("checkInteger only supports integer types");
         return @intCast(c.luaL_checkinteger(self.L, idx));
     }
 
-    pub fn checkIntegerT(self: State, comptime T: type, idx: i32) T {
-        return @intCast(c.luaL_checkinteger(self.L, idx));
-    }
-
-    pub fn checkNumber(self: State, idx: i32) f64 {
+    pub fn checkNumber(self: State, comptime T: comptime_float, idx: i32) T {
+        if (@typeInfo(T) != .int or @typeInfo(T) != .float)
+            @compileError("checkNumber only supports numeric types integer or float");
         return @floatCast(c.luaL_checknumber(self.L, idx));
     }
 

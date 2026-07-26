@@ -23,8 +23,8 @@ pub fn toUserdata(L: *bindings.lua.State, idx: i32) ?Position {
         L.getField(-2, "y");
         L.checkType(-1, .Number);
         const pos = Position{
-            .x = @intCast(L.toInteger(-2)),
-            .y = @intCast(L.toInteger(-1)),
+            .x = L.toInteger(i16, -2),
+            .y = L.toInteger(i16, -1),
         };
         L.pop(3);
         return pos;

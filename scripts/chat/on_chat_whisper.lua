@@ -49,6 +49,10 @@ server:on("on_chat_whisper", function(peer, req)
                 mob = char:to_mob(),
             })
         end,
+        ["dc"] = function()
+            logger:info("Disconnecting peer " .. peer.peer_id)
+            peer:disconnect()
+        end,
         ["add_item"] = function()
             local args = string.gmatch(req.message, "%S+")
             local item_id = tonumber(args()) or 0
@@ -88,9 +92,10 @@ server:on("on_chat_whisper", function(peer, req)
             local world = server:get_world()
             local char = peer:get_player_mob()
 
-            world:move_mob(char, x, y)
+            local position = world:get_position(peer.peer_id)
+            world:move(peer.peer_id, x, y)
             peer:send_command("motion_mob", {
-                origin = { x = char.x, y = char.y },
+                origin = { x = position.x, y = position.y },
                 kind = 1,
                 speed = 0,
                 mob_id = peer.peer_id,

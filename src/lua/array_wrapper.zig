@@ -69,7 +69,7 @@ fn lua__index(L: *State) i32 {
         return 1;
     };
 
-    const index: usize = @intCast(L.toInteger(2));
+    const index = L.toInteger(usize, 2);
     const start = (index * raw.sizeOf);
     const end = start + raw.sizeOf;
 

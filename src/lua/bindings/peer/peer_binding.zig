@@ -9,7 +9,7 @@ const Account = binding.domain.Account;
 const Character = binding.domain.Character;
 const PeerCommands = @import("peer_commands.zig");
 const AccountBinding = binding.AccountBinding;
-const SpawnedMobBinding = binding.SpawnedMobBinding;
+const MobBinding = binding.MobBinding;
 const Indexer = @import("../utils.zig").IndexerField;
 
 pub const PeerBinding = @This();
@@ -18,6 +18,12 @@ pub const metatableName = "mt_" ++ @typeName(network.Peer);
 
 pub fn getMetatable(L: *State) void {
     L.getMetatableByName(metatableName);
+}
+
+pub fn toUserdata(L: *State, idx: i32) ?*Peer {
+    return (L.toUserdata(*Peer, idx) orelse {
+        return null;
+    }).*;
 }
 
 pub fn newUserdata(L: *State, peer: *Peer) void {
@@ -71,6 +77,14 @@ pub fn bind(L: *State) void {
                 },
             },
         },
+        .{
+            .name = "__eq",
+            .value = .{
+                .func = .{
+                    .func = lua__eq,
+                },
+            },
+        },
     });
     L.pushFunction(lua__index);
     L.setField(-2, "__index");
@@ -118,27 +132,11 @@ fn lua__get_player_mob(L: *State) i32 {
 
     const account = peer.account;
     var char: *Character = @constCast(&account.characters[@intCast(account.charSelected)]);
-    if (peer.playerState == null) {
-        peer.playerState = .{
-            .mob = undefined,
-            .spawnedMob = .{
-                .x = @intCast(char.position.x),
-                .y = @intCast(char.position.y),
-                .data = undefined,
-            },
-        };
-    }
 
-    if (peer.playerState) |*state| {
-        state.mob = char.toMob();
-        state.mob.mobId = @intCast(peer.peerId);
-
-        // create reference to the mob in the spawned mob userdata so that it can be accessed from Lua
-        state.spawnedMob.data = &state.mob;
-        SpawnedMobBinding.newUserdata(L, &state.spawnedMob);
-    } else {
-        return L.panic("player state not setup");
-    }
+    const state = &peer.playerState;
+    state.mob = char.toMob();
+    state.mob.mobId = @intCast(peer.peerId);
+    MobBinding.newUserdata(L, &state.mob);
     return 1;
 }
 
@@ -172,4 +170,19 @@ fn lua_send_command(L: *State) i32 {
     L.pushValue(3);
     _ = PeerCommands.dispatch(peer, commandName, L);
     return 0;
+}
+
+fn lua__eq(L: *State) i32 {
+    const peer: *Peer = (L.toUserdata(*Peer, 1) orelse {
+        L.pushBool(false);
+        return 1;
+    }).*;
+
+    const other: *Peer = (L.toUserdata(*Peer, 2) orelse {
+        L.pushBool(false);
+        return 1;
+    }).*;
+
+    L.pushBool(other.peerId == peer.peerId);
+    return 1;
 }

@@ -2,7 +2,7 @@ const domain = @import("packet.zig").domains;
 const std = @import("std");
 
 pub const Header = @import("packet.zig").Header;
-const Opcode = @import("packet.zig").Opcode;
+pub const Opcode = @import("packet.zig").Opcode;
 const crypto = @import("crypto.zig");
 
 // terms:
@@ -157,6 +157,17 @@ pub const StorageType = enum(u8) {
 };
 
 pub const PacketItemCreateOutput = extern struct {
+    header: Header,
+    position: PositionData,
+    itemId: u16,
+    item: ItemData,
+    rotate: u8,
+    state: u8,
+    height: u8,
+    create: u8,
+};
+
+pub const PacketItemMoveOutput = extern struct {
     header: Header,
     storage: u16,
     slot: u16,

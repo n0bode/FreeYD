@@ -15,6 +15,8 @@ pub const NPC = extern struct {
     name: [16]u8,
     currentPosition: Position,
     startPosition: Position,
+    regOnUpdate: i32,
+    regOnInteract: i32,
     updatedAt: u64,
     mob: *Mob,
 

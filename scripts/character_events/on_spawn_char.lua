@@ -1,6 +1,6 @@
 local server = require("server")
 local logger = require("logger")
-local multicast = require("scripts.utils.multicast").multicast
+local query = require("scripts.utils.queries")
 local view = require("scripts.utils.view")
 
 server:on("on_spawn_char", function(peer, req)
@@ -34,33 +34,27 @@ server:on("on_spawn_char", function(peer, req)
 
     local player_mob = peer:get_player_mob()
 
-    multicast(last_position, last_position, function(another, mob, position, location)
-        -- notify another player create a mob
-        if peer == another then
-            return
+    query.in_area(last_position, nil, function(result)
+        local position = { x = result.position.x, y = result.position.y }
+        if result.is_player then
+            local another = result.peer
+            -- notify another player create a mob
+            if peer == another then
+                return
+            end
+
+            logger:info("notify another player " .. another.peer_id .. " to spawn mob for peer " .. peer.peer_id)
+            another:send_command("spawn_mob", {
+                position = char.position,
+                owner_id = peer.peer_id,
+                mob = player_mob,
+            })
         end
 
-        logger:info("notify another player " .. another.peer_id .. " to spawn mob for peer " .. peer.peer_id)
-        another:send_command("spawn_mob", {
-            position = char.position,
-            owner_id = peer.peer_id,
-            mob = player_mob,
-        })
-
-        -- notify peer create a mob for another player
         peer:send_command("spawn_mob", {
-            position = { x = position.x, y = position.y },
-            owner_id = another.peer_id,
-            mob = mob,
-        })
-    end)
-
-    -- only npc and othes...
-    view.each_mobs_in_area(last_position, function(mob, position)
-        peer:send_command("spawn_mob", {
-            position = { x = position.x, y = position.y },
-            owner_id = mob.mob_id,
-            mob = mob,
+            position = { x = result.position.x, y = result.position.y },
+            owner_id = result.mob.mob_id,
+            mob = result.mob,
         })
     end)
 end)

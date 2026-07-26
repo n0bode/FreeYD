@@ -1,6 +1,6 @@
 local server = require("server")
 local logger = require("logger")
-local multicast = require("scripts.utils.multicast").multicast
+local queries = require("scripts.utils.queries")
 local rtree = require("rtree")
 
 ---@return Rect
@@ -28,6 +28,10 @@ teleports:query_at(0, 0, function(value)
     logger:info("x = " .. value[1])
 end)
 
+local function only_players_in_area(result)
+    return result.is_player
+end
+
 server:on("on_teleport", function(peer, req)
     local world = server:get_world()
     local origin = world:get_position(peer.peer_id)
@@ -35,8 +39,8 @@ server:on("on_teleport", function(peer, req)
         logger:error("peer " .. peer.peer_id .. " has no position")
         return
     end
+
     teleports:query_at(origin.x, origin.y, function(dest)
-        logger:info(" teleporting from " .. origin.x .. "," .. origin.y .. "to " .. dest.x .. "," .. dest.y)
         peer:send_command("motion_mob", {
             origin = origin,
             kind = 1,
@@ -45,44 +49,52 @@ server:on("on_teleport", function(peer, req)
             destination = dest,
         })
 
-        multicast(origin, origin, function(another, mob, location)
-            logger:info("send to " .. another.peer_id)
-
-            -- is mine
-            if another == peer then
-                return
-            end
-
-            logger:info("delete mob to " .. another.peer_id)
-            another:send_command("delete_mob", {
-                mob_id = peer.peer_id,
-            })
-            peer:send_command("delete_mob", {
-                mob_id = another.peer_id,
-            })
-        end)
-
         local mob_player = peer:get_player_mob()
-
-        multicast(dest, dest, function(another, mob, position, location)
-            logger:info("send to " .. another.peer_id)
-            -- is mine
-            if another == peer then
-                return
-            end
-
-            another:send_command("spawn_mob", {
-                position = dest,
-                owner_id = peer.peer_id,
-                mob = mob_player,
-            })
-
-            peer:send_command("spawn_mob", {
-                position = { x = position.x, y = position.y },
-                owner_id = another.peer_id,
-                mob = mob,
-            })
-        end)
         world:move(peer.peer_id, dest.x, dest.y)
+        queries.teleport(origin, dest, function(result, is_dest)
+            local mob = result.mob
+            local position = { x = result.position.x, y = result.position.y }
+            -- origin
+            if not is_dest then
+                if result.is_player then
+                    local another = result.peer
+                    logger:info("send to " .. another.peer_id)
+                    -- is mine
+                    if another == peer then
+                        return
+                    end
+
+                    logger:info("delete mob to " .. another.peer_id)
+                    another:send_command("delete_mob", {
+                        mob_id = peer.peer_id,
+                    })
+                end
+                peer:send_command("delete_mob", {
+                    mob_id = mob.mob_id,
+                })
+            else
+                --dest
+                if result.is_player then
+                    local another = result.peer
+                    logger:info("send to " .. another.peer_id)
+                    -- is mine
+                    if another == peer then
+                        return
+                    end
+
+                    another:send_command("spawn_mob", {
+                        position = dest,
+                        owner_id = peer.peer_id,
+                        mob = mob_player,
+                    })
+                end
+
+                peer:send_command("spawn_mob", {
+                    position = { x = position.x, y = position.y },
+                    owner_id = mob.mob_id,
+                    mob = mob,
+                })
+            end
+        end)
     end)
 end)

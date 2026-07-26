@@ -85,8 +85,10 @@ fn printLua(state: *State) i32 {
 
 fn luaPanicCallback(L: LuaState) callconv(.c) c_int {
     const msg = State.wrap(L).toString(-1);
+    c.luaL_traceback(L, L, msg.ptr, 1);
+    const traceback = State.wrap(L).toString(-1);
 
-    std.log.err("LUA PANIC: {s}", .{msg});
+    std.log.err("PANIC: {s}", .{traceback});
     return 0; // Isso vai deixar o Lua dar o exit padrão, mas agora você viu o erro.
 }
 

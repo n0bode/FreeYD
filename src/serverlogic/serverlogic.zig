@@ -77,17 +77,17 @@ pub const ServerLogic = struct {
     fn execNPCInteract(self: *ServerLogic, npc: *core.NPC, peer: *network.Peer) void {
         const L = self.state;
         L.restoreRegistry(npc.regOnInteract);
-        if (L.isFunction(-1)) {
-            bindings.NPCBinding.newUserdata(L, npc);
-            bindings.PeerBinding.newUserdata(L, peer);
-            if (!L.pcall(2, 0)) {
-                logger.err("NPC({s}): on_interact failed => {s}", .{ npc.name, L.toString(-1) });
-                return;
-            }
-        } else {
+        if (!L.isFunction(-1)) {
             logger.warn("NPC({s}): interacter is not a function", .{npc.name});
+            L.pop(1);
+            return;
         }
-        L.pop(1);
+        bindings.NPCBinding.newUserdata(L, npc);
+        bindings.PeerBinding.newUserdata(L, peer);
+        if (!L.pcall(2, 0)) {
+            logger.err("NPC({s}): on_interact failed => {s}", .{ npc.name, L.toString(-1) });
+            L.pop(1);
+        }
     }
 
     pub fn start(self: *ServerLogic, io: std.Io) !void {
@@ -110,7 +110,7 @@ pub const ServerLogic = struct {
     fn loopServer(self: *ServerLogic, io: std.Io) void {
         while (self.server.state == .running) {
             // 24 per second
-            io.sleep(.fromMilliseconds(1000 / 24), .real) catch {
+            io.sleep(.fromMilliseconds(1000), .real) catch {
                 logger.warn("canceled wait", .{});
                 return;
             };
@@ -122,12 +122,21 @@ pub const ServerLogic = struct {
 
     fn execNPCUpdate(self: *ServerLogic, serverTime: u64) void {
         const L = self.state;
+        std.debug.assert(L.getTop() == 0);
         for (self.world.npcs.items) |*npc| {
             L.restoreRegistry(npc.regOnUpdate);
+            if (!L.isFunction(-1)) {
+                L.pop(1);
+                logger.warn("NPC({s}): on_update is not a function", .{npc.name});
+                continue;
+            }
+
             bindings.NPCBinding.newUserdata(L, npc);
             L.pushInteger(@intCast(serverTime));
             if (!L.pcall(2, 1)) {
                 logger.err("NPC({s}).on_update: failed {s}", .{ npc.name, L.toString(-1) });
+                L.pop(1);
+                continue;
             }
 
             if (L.isNil(-1) or (L.isBoolean(-1) and L.toBoolean(-1))) {

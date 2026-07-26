@@ -135,14 +135,14 @@ fn lua__create_character(L: *lua.State) i32 {
     @memcpy(char.name[0..name.len], name[0..]);
 
     if (!L.isNil(6) and L.getLuaType(6) == .Function) {
-        const n = L.getTop();
         L.pushValue(6);
         L.pushValue(-2);
         if (!L.pcall(1, 0)) {
-            std.log.err("{s}", .{L.toString(-1)});
-            return L.throw("builder: ");
+            const msg = L.toString(-1);
+            std.log.err("create_character 'builder' returns failed: {s}", .{msg});
+            L.pop(1);
+            return L.throw("builder returns failed");
         }
-        L.pop(L.getTop() - n);
     }
     L.pushNil();
     return 2;

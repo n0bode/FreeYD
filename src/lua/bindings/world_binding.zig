@@ -180,7 +180,7 @@ fn call_eachMob(L: *lua.State, fnIndex: i32, point: *Point, mob: *core.Mob) void
     PointBinding.newUserdata(L, point);
     if (!L.pcall(2, 0)) {
         std.log.err("failed to call eachMob: {s}", .{L.toString(-1)});
-        L.pushNil();
+        L.pop(1);
         return;
     }
 }

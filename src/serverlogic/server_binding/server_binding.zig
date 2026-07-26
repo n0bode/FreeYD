@@ -203,6 +203,12 @@ fn lua_get_peer(L: *State) i32 {
     };
 
     const peerId = L.checkInteger(i32, -1);
+
+    if (peerId > self.server.peers.len or peerId <= 0) {
+        L.pushNil();
+        return 1;
+    }
+
     if (self.server.peers[@intCast(peerId)]) |peer| {
         bindings.PeerBinding.newUserdata(L, peer);
     } else {

@@ -1,6 +1,10 @@
 local server = require("server")
 local logger = require("logger")
-local multicast = require("scripts.utils.multicast").multicast
+local queries = require("scripts.utils.queries")
+
+local function only_players_in_area(result)
+    return result.is_player
+end
 
 server:on("on_disconnected", function(peer)
     logger:info("peer disconnected: " .. peer.peer_id)
@@ -15,7 +19,10 @@ server:on("on_disconnected", function(peer)
     if pos then
         world:remove(peer.peer_id)
         logger:debug("peer " .. peer.peer_id .. " position: " .. pos.x .. "," .. pos.y)
-        multicast(pos, pos, function(another_peer, mob, position, location)
+
+
+        queries.in_area(pos, only_players_in_area, function(result)
+            local another_peer = result.peer
             if another_peer == peer then
                 return
             end

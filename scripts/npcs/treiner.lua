@@ -1,6 +1,6 @@
 local server = require("server");
 local logger = require("logger");
-local multicast = require("scripts.utils.multicast").multicast
+local queries = require("scripts.utils.queries")
 
 server:create_npc {
     name = "Treinador",
@@ -21,7 +21,7 @@ server:create_npc {
     },
     on_update = function(npc, server_time)
         local delta = server_time - npc.updated_at
-        if delta < 1000000 then
+        if delta < 10000 then
             return false
         end
 
@@ -32,18 +32,22 @@ server:create_npc {
         world:move(npc.id, dest.x, dest.y)
         npc.current_position.x = dest.x
         npc.current_position.y = dest.y
-        multicast(start, dest, function(peer, _, _)
-            peer:send_command("motion_mob", {
-                origin = { x = start.x, y = start.y },
-                kind = 0,
-                speed = 2,
-                mob_id = npc.id,
-                destination = { x = dest.x, y = dest.y },
-            })
+
+        queries.in_areas(start, dest, nil, function(result)
+            if result.is_player then
+                result.peer:send_command("motion_mob", {
+                    origin = { x = start.x, y = start.y },
+                    kind = 0,
+                    speed = 2,
+                    mob_id = npc.id,
+                    destination = { x = dest.x, y = dest.y },
+                })
+            end
         end)
     end
 }
 
+--[[
 server:create_npc {
     name = "Guarda",
     position = { x = 2114, y = 2080 },
@@ -69,3 +73,4 @@ server:create_npc {
         -- You can add logic here to make the NPC move, interact with players, etc.
     end
 }
+--]]

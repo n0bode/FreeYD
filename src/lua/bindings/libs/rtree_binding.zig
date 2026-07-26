@@ -146,5 +146,6 @@ fn fn_query_at(ptr: *anyopaque, _: RTree.Rect, data: i32) void {
     if (!L.pcall(1, 0)) {
         std.log.err("err: {s}", .{L.toString(-1)});
         _ = L.panic("failed to call function");
+        L.pop(1);
     }
 }

@@ -1,5 +1,5 @@
 local server = require("server");
-local multicast = require("scripts.utils.multicast").multicast
+local queries = require("scripts.utils.queries")
 
 server:on("on_move_item", function(peer, req)
     -- same slot
@@ -45,10 +45,15 @@ server:on("on_move_item", function(peer, req)
     if changedMob then
         local player_mob = peer:get_player_mob()
         local position = { x = player_mob.x, y = player_mob.y }
-        multicast(position, position,
-            function(another_peer, _, _)
+        local only_players = function(result)
+            return result.is_player
+        end
+
+        queries.in_area(position, only_players,
+            function(result)
+                local another_peer = result.peer
                 another_peer:send_command("update_equipments", {
-                    mob = player_mob.data,
+                    mob = player_mob,
                 })
             end)
     end

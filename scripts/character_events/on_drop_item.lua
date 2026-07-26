@@ -1,5 +1,4 @@
 local server = require("server");
-local multicast = require("scripts.utils.multicast").multicast
 local logger = require("logger");
 
 server:on("on_drop_item", function(peer, req)

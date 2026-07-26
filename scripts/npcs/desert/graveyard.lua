@@ -1,28 +1,38 @@
 local server = require("server");
 local logger = require("logger");
-local multicast = require("scripts.utils.multicast").multicast
+local queries = require("scripts.utils.queries")
 
 server:create_npc {
     name = "Coveiro",
     position = { x = 2372, y = 2099 },
     on_interact = function(npc, peer)
+        local world = server:get_world()
         local mob = peer:get_player_mob()
-        local position = { x = mob.x, y = mob.y }
-        logger:info("Player " ..
-            peer.peer_id .. " interacted with NPC " .. npc.name .. " at position (" .. mob.x .. ", " .. mob.y .. ")")
-        if mob.data.stats.level < 40 then
+        local position = world:get_position(mob.mob_id)
+        if not position then
+            logger:error("peer " .. peer.peer_id .. " has no position")
+            peer:disconnect()
+            return
+        end
+
+        local only_players = function(result)
+            return result.is_player
+        end
+
+        local level = mob.stats.level
+        if level < 40 then
             peer:send_command("chat_message", {
-                message = "Voce precisa ser nivel 40 para me ajudar nessa merda",
+                message = "You need to be more experienced to receive my help.",
                 mob_id = npc.id,
                 type = 0,
             })
             return
         end
 
-        if mob.data.stats.level > 115 then
-            multicast(position, position, function(peer, mob, location)
+        if level > 115 then
+            queries.in_area(position, only_players, function(result)
                 peer:send_command("chat_message", {
-                    message = "Obrigado por me ajudar, mas seu gostoso",
+                    message = "Thank you for your help, but now I can take care of myself.",
                     mob_id = npc.id,
                     type = 0,
                 })
@@ -30,11 +40,18 @@ server:create_npc {
             return
         end
 
-        if math.abs(npc.start_position.x - mob.x) > 3 or math.abs(npc.start_position.y - mob.y) > 3 then
+        if math.abs(npc.start_position.x - position.x) > 3 or math.abs(npc.start_position.y - position.y) > 3 then
+            peer:send_command("chat_message", {
+                message = "I cannot hear you from here. Please come closer.",
+                mob_id = npc.id,
+                type = 0,
+            })
             return
         end
+
         local dest = { x = 2397, y = 2104 };
-        multicast(position, dest, function(another_peer, mob, location)
+        queries.in_areas(position, dest, only_players, function(result)
+            local another_peer = result.peer
             another_peer:send_command("motion_mob", {
                 mob_id = peer.peer_id,
                 kind = 1,

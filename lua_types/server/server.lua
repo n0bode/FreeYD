@@ -66,6 +66,17 @@ function Server:multicast_command_in_area(event, area, data, opts) end
 ---@param npc_info NPCCreateInfo
 function Server:create_npc(npc_info) end
 
+---@class SpawnItemInfo
+---@field item Item
+---@field position Position
+---@field rotation integer? default 0
+---@field state integer? default 0
+---@field height integer? default 1
+---@field create integer? default 1
+
+---@param info SpawnItemInfo
+function Server:spawn_item(info) end
+
 ---Spawn the player mob for this peer in the world.
 ---@param peer Peer
 ---@param slot_id integer The slot ID of the character to spawn.

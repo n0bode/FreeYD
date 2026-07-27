@@ -31,6 +31,7 @@ const funcs = std.StaticStringMap(CommandFN).initComptime(&.{
     .{ "chat_message", chatMessage },
     .{ "drop_item", dropItem },
     .{ "create_item", createItem },
+    .{ "delete_item", itemDelete },
 });
 
 pub fn dispatch(peer: *Peer, command: []const u8, L: *State) bool {
@@ -321,6 +322,15 @@ fn dropItem(peer: *Peer, L: *State) void {
     peer.sendPacket(&pack) catch {};
 }
 
+fn itemDelete(peer: *Peer, L: *State) void {
+    L.checkType(3, .Table);
+    L.getField(3, "item_id");
+    const itemId = L.checkInteger(u16, -1);
+    L.pop(1);
+    var pack = builders.buildDeleteItem(itemId);
+    peer.sendPacket(&pack) catch {};
+}
+
 fn createItem(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
 
@@ -347,18 +357,10 @@ fn createItem(peer: *Peer, L: *State) void {
     L.pop(1);
 
     L.getField(3, "state");
-    const state = L.checkInteger(u8, -1);
+    const state = L.toIntegerOr(u8, -1, 0);
     L.pop(1);
 
-    L.getField(3, "height");
-    const height = L.checkInteger(u8, -1);
-    L.pop(1);
-
-    L.getField(3, "create");
-    const create = L.checkInteger(u8, -1);
-    L.pop(1);
-
-    var pack = builders.buildItemCreate(position, itemId, item.*, rotate, state, height, create);
+    var pack = builders.buildItemCreate(position, itemId, item.*, rotate, state);
     injectOptions(L, &pack.header);
     peer.sendPacket(&pack) catch {};
 }

@@ -82,6 +82,23 @@ server:on("on_chat_whisper", function(peer, req)
                 })
             end
         end,
+        ["create_item"] = function()
+            local args = string.gmatch(req.message, "%d+")
+            local item_id = tonumber(args()) or 0
+            if item_id == 0 then
+                peer:send_text("Invalid item_id")
+                return
+            end
+
+            server:spawn_item {
+                item = Item.new(item_id),
+                position = { x = tonumber(args()) or 0, y = tonumber(args()) or 0 },
+                rotation = 0,
+                state = 1,
+                height = tonumber(args()) or 1,
+                create = 1,
+            }
+        end,
         ["tp"] = function()
             local args = string.gmatch(req.message, "%S+")
             local x = tonumber(args()) or 2112

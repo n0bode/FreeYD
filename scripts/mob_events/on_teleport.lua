@@ -52,8 +52,24 @@ server:on("on_teleport", function(peer, req)
         local mob_player = peer:get_player_mob()
         world:move(peer.peer_id, dest.x, dest.y)
         queries.teleport(origin, dest, function(result, is_dest)
-            local mob = result.mob
             local position = { x = result.position.x, y = result.position.y }
+
+            if result.is_item then
+                if not is_dest then
+                    peer:send_command("delete_item", { item_id = result.item.item_id })
+                else
+                    peer:send_command("create_item", {
+                        item_id = result.item.item_id,
+                        item = result.item.item,
+                        position = position,
+                        rotate = result.item.rotation,
+                        state = result.item.state,
+                    })
+                end
+                return
+            end
+
+            local mob = result.mob
             -- origin
             if not is_dest then
                 if result.is_player then

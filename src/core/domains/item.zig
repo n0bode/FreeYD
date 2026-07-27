@@ -1,4 +1,5 @@
 const std = @import("std");
+const Position = @import("domains.zig").Position;
 
 pub const ItemAttribute = extern struct {
     // 43 = quality item +0 +1 +2 ...
@@ -9,6 +10,14 @@ pub const ItemAttribute = extern struct {
 pub const Item = extern struct {
     itemID: u16 = 0,
     attributes: [3]ItemAttribute = [_]ItemAttribute{.{}} ** 3,
+};
+
+pub const WorldItem = extern struct {
+    itemId: u16,
+    item: Item,
+    position: Position,
+    rotation: u8,
+    state: u8,
 };
 
 pub const StorageType = enum(u8) {

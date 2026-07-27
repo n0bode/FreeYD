@@ -51,10 +51,24 @@ server:on("on_spawn_char", function(peer, req)
             })
         end
 
-        peer:send_command("spawn_mob", {
-            position = { x = result.position.x, y = result.position.y },
-            owner_id = result.mob.mob_id,
-            mob = result.mob,
-        })
+
+        if result.is_item then
+            logger:info("notify peer " .. peer.peer_id .. " to spawn item " .. result.item.item_id)
+            peer:send_command("create_item", {
+                position = position,
+                item_id = result.item.item_id,
+                item = result.item,
+                rotate = 0,
+                height = 1,
+                state = 1,
+                create = 1,
+            })
+        else
+            peer:send_command("spawn_mob", {
+                position = { x = result.position.x, y = result.position.y },
+                owner_id = result.mob.mob_id,
+                mob = result.mob,
+            })
+        end
     end)
 end)

@@ -163,8 +163,6 @@ pub const PacketItemCreateOutput = extern struct {
     item: ItemData,
     rotate: u8,
     state: u8,
-    height: u8,
-    create: u8,
 };
 
 pub const PacketItemMoveOutput = extern struct {
@@ -522,4 +520,10 @@ pub const PacketDropItemOutput = extern struct {
     rotation: PositionData,
     position: PositionData,
     itemID: u16,
+};
+
+pub const PacketDeleteItemOutput = extern struct {
+    header: Header,
+    itemId: u16,
+    dunno: u16,
 };

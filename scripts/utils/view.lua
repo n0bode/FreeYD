@@ -2,7 +2,7 @@ local server = require("server")
 local logger = require("logger")
 
 ---@param src  {x: integer, y: integer}
----@param func fun(mob: Mob, position: Position)
+---@param func fun(mob: Mob, position: integer)
 local function each_mobs_in_area(src, func)
     local multicast_area = tonumber(os.getenv("MULTICAST_AREA"))
 
@@ -14,11 +14,12 @@ local function each_mobs_in_area(src, func)
     }
 
     local map = server:get_world()
-    map:each_mobs_in_area(area, function(mob, position)
-        if is_player(mob.mob_id) then
+    map:each_mobs_in_area(area, function(entity, position, is_item)
+        if is_item then return end
+        if is_player(entity.mob_id) then
             return
         end
-        func(mob, position)
+        func(entity, position)
     end)
 end
 

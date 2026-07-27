@@ -127,8 +127,6 @@ pub fn buildItemCreate(
     item: Item,
     rotate: u8,
     state: u8,
-    height: u8,
-    create: u8,
 ) packets.PacketItemCreateOutput {
     return packets.PacketItemCreateOutput{
         .header = .{
@@ -139,8 +137,6 @@ pub fn buildItemCreate(
         .item = @bitCast(item),
         .rotate = rotate,
         .state = state,
-        .height = height,
-        .create = create,
     };
 }
 
@@ -162,5 +158,15 @@ pub fn buildItemDrop(
         .rotation = @bitCast(rotation),
         .slot = slot,
         .sourceType = storage,
+    };
+}
+
+pub fn buildDeleteItem(itemId: u16) packets.PacketDeleteItemOutput {
+    return packets.PacketDeleteItemOutput{
+        .header = .{
+            .operationCode = @intFromEnum(Opcode.DECAY_ITEM),
+        },
+        .itemId = itemId,
+        .dunno = 0,
     };
 }

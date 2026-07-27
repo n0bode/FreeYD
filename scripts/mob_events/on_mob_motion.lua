@@ -26,6 +26,21 @@ server:on("on_motion_mob", function(peer, req)
 
     local dest = { x = req.destination.x, y = req.destination.y };
     query.in_areas(req.origin, dest, nil, function(result)
+        if result.is_item then
+            if result.location == 1 then
+                peer:send_command("delete_item", { item_id = result.item.item_id })
+            elseif result.location == 2 then
+                peer:send_command("create_item", {
+                    item_id = result.item.item_id,
+                    item = result.item.item,
+                    position = { x = result.position.x, y = result.position.y },
+                    rotate = result.item.rotation,
+                    state = result.item.state,
+                })
+            end
+            return
+        end
+
         if result.is_player then
             local another_peer = result.peer
             if another_peer == peer then

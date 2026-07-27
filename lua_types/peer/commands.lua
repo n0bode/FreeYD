@@ -74,5 +74,6 @@ ChatType = {
 ---@field item Item
 ---@field rotate integer
 ---@field state integer
----@field height integer
----@field create integer
+
+---@class DeleteItemCommand
+---@field item_id integer

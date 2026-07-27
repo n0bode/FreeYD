@@ -51,5 +51,6 @@ function Peer:is_mine(another) end
 ---@overload fun(self: Peer, event: "chat_message", data: ChatMessageCommand, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "drop_item", data: DropItemCommand, opts: SendCommandOptions?) ?string
 ---@overload fun(self: Peer, event: "create_item", data: CreateItemCommand, opts: SendCommandOptions?) ?string
+---@overload fun(self: Peer, event: "delete_item", data: DeleteItemCommand, opts: SendCommandOptions?) ?string
 ---@return string? error message
 function Peer:send_command(event, data) end

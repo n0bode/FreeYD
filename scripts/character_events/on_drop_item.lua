@@ -20,9 +20,10 @@ server:on("on_drop_item", function(peer, req)
         return
     end
 
+    local position = { x = req.position.x, y = req.position.y }
     peer:send_command("drop_item", {
-        position = req.position,
-        rotation = req.rotation,
+        position = position,
+        rotation = { y = req.rotation.y, x = req.rotation.x },
         item_id = req.item_id,
         storage = req.storage,
         slot = req.slot,
@@ -37,8 +38,7 @@ server:on("on_drop_item", function(peer, req)
     })
 
     peer:send_command("create_item", {
-        position = req.position,
-        rotation = req.rotation,
+        position = position,
         item_id  = req.item_id,
         rotate   = 0,
         height   = 1,

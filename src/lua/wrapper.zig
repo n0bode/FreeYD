@@ -620,6 +620,14 @@ pub const State = struct {
         return @intCast(c.luaL_checkinteger(self.L, idx));
     }
 
+    pub fn toIntegerOr(self: State, comptime T: anytype, idx: i32, value: T) T {
+        if (@typeInfo(T) != .int)
+            @compileError("checkInteger only supports integer types");
+
+        if (!self.isType(-1, .Number)) return value;
+        return @intCast(c.luaL_checkinteger(self.L, idx));
+    }
+
     pub fn checkNumber(self: State, comptime T: comptime_float, idx: i32) T {
         if (@typeInfo(T) != .int or @typeInfo(T) != .float)
             @compileError("checkNumber only supports numeric types integer or float");

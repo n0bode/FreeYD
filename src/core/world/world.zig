@@ -10,6 +10,7 @@ pub const Object = entity.Object;
 const Point = core.Point;
 const Position = domains.Position;
 const Item = domains.Item;
+const WorldItem = domains.WorldItem;
 const Mob = domains.Mob;
 const NPC = domains.NPC;
 
@@ -23,11 +24,19 @@ pub const CreateNPC = struct {
     equipments: [16]Item,
 };
 
+pub const CreateItem = struct {
+    item: Item,
+    position: Position,
+    rotation: u8,
+    state: u8,
+};
+
 pub const World = struct {
     arena: std.heap.ArenaAllocator,
 
     npcs: std.ArrayList(NPC),
     mobs: std.ArrayList(Mob),
+    items: std.ArrayList(WorldItem),
     points: std.heap.MemoryPool(Object),
     indexes: std.AutoHashMap(u16, *Object),
 
@@ -45,6 +54,7 @@ pub const World = struct {
         // init with 1000 mobs
         // important: more mobs, needs heap invoke commands
         self.mobs = try .initCapacity(child_allocator, 1000);
+        self.items = try .initCapacity(child_allocator, 100);
         self.npcs = try .initCapacity(child_allocator, 100);
         self.points = try .initCapacity(child_allocator, 1000);
         return self;
@@ -181,6 +191,32 @@ pub const World = struct {
         if (!try self.tree.insert(&point.point)) {
             _ = self.indexes.remove(mob.mobId);
             return error.MobOutOfMap;
+        }
+        return point;
+    }
+
+    pub fn spawnItem(self: *World, info: CreateItem) !*Object {
+        const storedItem = try self.items.addOne(self.arena.allocator());
+        storedItem.* = .{
+            .itemId = 10_000 + @as(u16, @intCast(self.items.items.len)),
+            .item = info.item,
+            .position = .{ .x = info.position.x, .y = info.position.y },
+            .rotation = info.rotation,
+            .state = info.state,
+        };
+
+        const point = try self.points.create(self.arena.allocator());
+        point.* = Object{
+            .entity = .{
+                .item = storedItem,
+            },
+            .point = .{ .x = info.position.x, .y = info.position.y },
+        };
+
+        try self.indexes.put(storedItem.itemId, point);
+
+        if (!try self.tree.insert(&point.point)) {
+            return error.ItemOutOfMap;
         }
         return point;
     }

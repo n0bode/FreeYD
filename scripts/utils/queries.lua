@@ -39,8 +39,10 @@ end
 ---@field location integer
 ---@field position Position
 ---@field is_player boolean
+---@field is_item boolean
 ---@field peer Peer
 ---@field mob Mob
+---@field item ItemWorld
 local QueryResult = {}
 
 ---@param src  {x: integer, y: integer}
@@ -66,21 +68,36 @@ local function query_areas(src, dest, filter, func)
 
     local r_total = union_area(r_src, r_dest)
     local map = server:get_world()
-    map:each_mobs_in_area(r_total, function(mob, position)
-        logger:info("mob (" .. mob.mob_id .. ")")
+    map:each_mobs_in_area(r_total, function(entity, position, is_item)
         local location = location_id(r_dest, r_src, position)
         -- outside of both areas, no need to send
         if location == 3 then
             return
         end
 
-        local result = {
-            location = location,
-            position = position,
-            is_player = is_player(mob.mob_id),
-            peer = server:get_peer(mob.mob_id),
-            mob = mob,
-        }
+        local result
+        if is_item then
+            result = {
+                location = location,
+                position = position,
+                is_player = false,
+                is_item = true,
+                peer = nil,
+                mob = nil,
+                item = entity,
+            }
+        else
+            logger:info("mob (" .. entity.mob_id .. ")")
+            result = {
+                location = location,
+                position = position,
+                is_player = is_player(entity.mob_id),
+                is_item = false,
+                peer = server:get_peer(entity.mob_id),
+                mob = entity,
+                item = nil,
+            }
+        end
 
         if (not filter) or filter(result) then
             func(result)

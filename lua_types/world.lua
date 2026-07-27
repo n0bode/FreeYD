@@ -14,10 +14,23 @@ local World = {}
 ---@param func fun(mob: SpawnedMob)
 function World:each_mobs(func) end
 
----get all mobs within area
+---get all mobs and items within area
 ---@param area QueryArea
----@param func fun(mob: Mob, position: Position)
+---@param func fun(entity: Mob|ItemWorld, position: Position, is_item: boolean)
 function World:each_mobs_in_area(area, func) end
+
+---@class ItemWorld
+---@field item_id integer
+---@field item Item
+---@field position Position
+---@field rotation integer
+---@field height integer
+---@field state integer
+---@field create integer
+
+---list all items currently in the world
+---@param func fun(item: ItemWorld, position: Position)
+function World:list_items(func) end
 
 ---add spawn new mob in world
 ---@param mob Mob

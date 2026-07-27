@@ -9,6 +9,7 @@ const ServerLogic = serverlogic.ServerLogic;
 const DatabaseBinding = bindings.DatabaseBinding;
 const ItemBinding = bindings.ItemBinding;
 const PeerBinding = bindings.PeerBinding;
+const PositionBinding = bindings.PositionBinding;
 const responses = network.responses;
 
 const Database = serverlogic.Database;
@@ -103,6 +104,15 @@ pub fn bind(logic: *ServerLogic) void {
             .value = .{
                 .func = .{
                     .func = lua__spawn_player,
+                    .userdata = logic,
+                },
+            },
+        },
+        .{
+            .name = "spawn_item",
+            .value = .{
+                .func = .{
+                    .func = lua__spawn_item,
                     .userdata = logic,
                 },
             },
@@ -277,6 +287,57 @@ fn lua_create_npc(L: *State) i32 {
     }) catch {
         return L.panic("failed to create NPC: ");
     };
+    L.pushNil();
+    return 1;
+}
+
+fn lua__spawn_item(L: *State) i32 {
+    const self: *ServerLogic = L.toUserdata(ServerLogic, L.upValueIndex(2)) orelse {
+        L.pushString("missing server argument");
+        return 1;
+    };
+
+    L.checkType(2, .Table);
+
+    L.getField(2, "item");
+    const item = ItemBinding.toUserdata(L, -1) orelse {
+        L.pushString("spawn_item: 'item' must be an Item instance");
+        return 1;
+    };
+    L.pop(1);
+
+    L.getField(2, "position");
+    const position = PositionBinding.toUserdata(L, -1) orelse {
+        L.pushString("spawn_item: 'position' must be a Position instance");
+        return 1;
+    };
+    L.pop(1);
+
+    L.getField(2, "rotation");
+    const rotation = L.toIntegerOr(u8, -1, 0);
+    L.pop(1);
+
+    L.getField(2, "state");
+    const state = L.toIntegerOr(u8, -1, 0);
+    L.pop(1);
+
+    _ = self.world.spawnItem(.{
+        .state = state,
+        .item = item.*,
+        .position = position,
+        .rotation = rotation,
+    }) catch {
+        L.pushString("spawn_item: failed to insert item in world");
+        return 1;
+    };
+
+    var pack = network.builders.buildItemCreate(position, item.itemID, item.*, rotation, state);
+
+    for (self.server.peers) |peer_opt| {
+        const peer = peer_opt orelse continue;
+        peer.sendPacket(&pack) catch {};
+    }
+
     L.pushNil();
     return 1;
 }

@@ -28,10 +28,6 @@ teleports:query_at(0, 0, function(value)
     logger:info("x = " .. value[1])
 end)
 
-local function only_players_in_area(result)
-    return result.is_player
-end
-
 server:on("on_teleport", function(peer, req)
     local world = server:get_world()
     local origin = world:get_position(peer.peer_id)
@@ -43,6 +39,7 @@ server:on("on_teleport", function(peer, req)
     teleports:query_at(origin.x, origin.y, function(dest)
         peer:send_command("motion_mob", {
             origin = origin,
+            er_id,
             kind = 1,
             speed = 0,
             mob_id = peer.peer_id,
@@ -57,15 +54,23 @@ server:on("on_teleport", function(peer, req)
             if object.type == 3 then
                 local item = object.result.item
                 if not is_dest then
-                    peer:send_command("delete_item", { item_id = item.item_id })
+                    peer:send_command("delete_ground_item", { item_id = item.item_id })
                 else
-                    peer:send_command("create_item", {
+                    peer:send_command("create_ground_item", {
                         item_id = item.item_id,
                         item = item.item,
                         position = position,
                         rotate = item.rotation,
                         state = item.state,
                     })
+
+                    if item.state == 1 then
+                        peer:send_command("update_ground_item", {
+                            item_id = item.item_id,
+                            state = item.state,
+                            z
+                    /)
+                    end
                 end
                 return
             end

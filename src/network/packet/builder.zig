@@ -130,7 +130,7 @@ pub fn buildCreateGroundItem(
 ) packets.PacketCreateGroundItemOutput {
     return packets.PacketCreateGroundItemOutput{
         .header = .{
-            .operationCode = @intFromEnum(Opcode.CREATE_ITEM),
+            .operationCode = @intFromEnum(Opcode.CREATE_GROUND_ITEM),
         },
         .position = @bitCast(position),
         .itemId = itemId,
@@ -164,9 +164,19 @@ pub fn buildItemDrop(
 pub fn buildDeleteGroundItem(itemId: u16) packets.PacketDeleteGroundItemOutput {
     return packets.PacketDeleteGroundItemOutput{
         .header = .{
-            .operationCode = @intFromEnum(Opcode.DECAY_ITEM),
+            .operationCode = @intFromEnum(Opcode.DELETE_GROUND_ITEM),
         },
         .itemId = itemId,
         .dunno = 0,
+    };
+}
+
+pub fn buildUpdateGroundItem(itemId: u16, state: u8) packets.PacketUpdateGroundItemOutput {
+    return packets.PacketUpdateGroundItemOutput{
+        .header = .{
+            .operationCode = @intFromEnum(Opcode.INTERACT_GROUND_ITEM),
+        },
+        .itemId = itemId,
+        .state = @intCast(state),
     };
 }

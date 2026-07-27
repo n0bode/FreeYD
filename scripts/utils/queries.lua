@@ -43,7 +43,7 @@ end
 ---@field mob Mob
 
 ---@class GroundItemResult
----@field item ItemWorld
+---@field item GroundItem
 
 ---@enum QueryResultType
 local QueryResultType = {

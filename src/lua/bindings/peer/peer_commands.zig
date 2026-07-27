@@ -30,8 +30,9 @@ const funcs = std.StaticStringMap(CommandFN).initComptime(&.{
     .{ "update_equipments", updateEquipment },
     .{ "chat_message", chatMessage },
     .{ "drop_item", dropItem },
-    .{ "create_item", createItem },
-    .{ "delete_item", itemDelete },
+    .{ "create_ground_item", createGroundItem },
+    .{ "delete_ground_item", deleteGroundItem },
+    .{ "update_ground_item", updateGroundItem },
 });
 
 pub fn dispatch(peer: *Peer, command: []const u8, L: *State) bool {
@@ -322,7 +323,7 @@ fn dropItem(peer: *Peer, L: *State) void {
     peer.sendPacket(&pack) catch {};
 }
 
-fn itemDelete(peer: *Peer, L: *State) void {
+fn deleteGroundItem(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
     L.getField(3, "item_id");
     const itemId = L.checkInteger(u16, -1);
@@ -331,7 +332,21 @@ fn itemDelete(peer: *Peer, L: *State) void {
     peer.sendPacket(&pack) catch {};
 }
 
-fn createItem(peer: *Peer, L: *State) void {
+fn updateGroundItem(peer: *Peer, L: *State) void {
+    L.checkType(3, .Table);
+    L.getField(3, "item_id");
+    const itemId = L.checkInteger(u16, -1);
+    L.pop(1);
+
+    L.getField(3, "state");
+    const state = L.toIntegerOr(u8, -1, 0);
+    L.pop(1);
+
+    var pack = builders.buildUpdateGroundItem(itemId, state);
+    peer.sendPacket(&pack) catch {};
+}
+
+fn createGroundItem(peer: *Peer, L: *State) void {
     L.checkType(3, .Table);
 
     L.getField(3, "position");

@@ -15,7 +15,7 @@ const mapper = utils.MapperStructPtr(World);
 
 pub const WorldBinding = @This();
 pub const PointBinding = utils.MapperStructPtr(Point);
-pub const WorldItemBinding = utils.MapperStructPtr(GroundItem);
+pub const GroundItemBinding = utils.MapperStructPtr(GroundItem);
 
 pub const metatableName = mapper.metatableName;
 
@@ -34,7 +34,7 @@ pub fn getMetatable(L: *lua.State) void {
 pub fn bind(L: *lua.State) void {
     mapper.bind(L);
     PointBinding.bind(L);
-    WorldItemBinding.bind(L);
+    GroundItemBinding.bind(L);
 
     utils.bindFunctions(L, metatableName, &.{
         .{
@@ -71,6 +71,12 @@ pub fn bind(L: *lua.State) void {
             .name = "get_position",
             .value = .{
                 .func = .{ .func = lua__get_position },
+            },
+        },
+        .{
+            .name = "get_ground_item",
+            .value = .{
+                .func = .{ .func = lua__get_ground_item },
             },
         },
     });
@@ -201,7 +207,7 @@ fn call_eachItem(L: *lua.State, fnIndex: i32, point: *Point, item: *GroundItem) 
         return;
     }
 
-    WorldItemBinding.newUserdata(L, item);
+    GroundItemBinding.newUserdata(L, item);
     PointBinding.newUserdata(L, point);
     L.pushInteger(1);
     if (!L.pcall(3, 0)) {
@@ -272,5 +278,21 @@ fn lua__get_position(L: *lua.State) i32 {
     L.setField(-2, "x");
     L.pushInteger(point.point.y);
     L.setField(-2, "y");
+    return 1;
+}
+
+fn lua__get_ground_item(L: *lua.State) i32 {
+    const self: *core.World = mapper.toUserdata(L, 1) orelse {
+        L.pushNil();
+        return 1;
+    };
+
+    const id = L.checkInteger(u16, 2);
+    const item = self.getGroundItem(id) catch {
+        L.pushNil();
+        return 1;
+    };
+
+    GroundItemBinding.newUserdata(L, item);
     return 1;
 }

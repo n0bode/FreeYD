@@ -18,6 +18,7 @@ pub const GroundItem = extern struct {
     position: Position,
     rotation: u8,
     state: u8,
+    onInteract: i32,
 };
 
 pub const StorageType = enum(u8) {

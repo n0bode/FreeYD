@@ -23,15 +23,23 @@ server:on("on_motion_mob", function(peer, req)
         if object.type == 3 then
             local item = object.result.item
             if object.location == 1 then
-                peer:send_command("delete_item", { item_id = item.item_id })
+                peer:send_command("delete_ground_item", { item_id = item.item_id })
             elseif object.location == 2 then
-                peer:send_command("create_item", {
+                logger:info(" to spawn item " .. item.item_id .. "state = " .. item.state)
+                peer:send_command("create_ground_item", {
                     item_id = item.item_id,
                     item = item.item,
                     position = position,
                     rotate = item.rotation,
                     state = item.state,
                 })
+
+                if item.state == 1 then
+                    peer:send_command("update_ground_item", {
+                        item_id = item.item_id,
+                        state = item.state,
+                    })
+                end
             end
             return
         end

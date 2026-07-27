@@ -22,10 +22,10 @@ local ObjectType = {
 
 ---fetch all object in area
 ---@param area QueryArea
----@param func fun(entity: Mob|ItemWorld, position: Position, type: ObjectType)
+---@param func fun(entity: Mob|GroundItem, position: Position, type: ObjectType)
 function World:each_world_in_area(area, func) end
 
----@class ItemWorld
+---@class GroundItem
 ---@field item_id integer
 ---@field item Item
 ---@field position Position
@@ -62,3 +62,8 @@ function World:get_position(id) end
 ---@param id integer
 ---@return boolean
 function World:remove(id) end
+
+---get object in the world
+---@param id integer
+---@return GroundItem?
+function World:get_ground_item(id) end

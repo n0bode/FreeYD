@@ -527,3 +527,9 @@ pub const PacketDeleteGroundItemOutput = extern struct {
     itemId: u16,
     dunno: u16,
 };
+
+pub const PacketUpdateGroundItemOutput = extern struct {
+    header: Header,
+    itemId: u32,
+    state: u32,
+};

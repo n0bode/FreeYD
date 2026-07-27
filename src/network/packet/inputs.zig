@@ -19,6 +19,7 @@ pub const PacketData = union(OpcodeFromClient) {
     teleport: PacketTeleportInput,
     interactionMob: PacketMobInteractInput,
     dropItem: PacketDropItemInput,
+    interactGroundItem: PacketGroundItemInteractInput,
 };
 
 // This a Packet abstract union received from Client
@@ -76,7 +77,7 @@ pub const OpcodeFromClient = enum(u16) {
     teleport = @intFromEnum(Opcode.TELEPORT),
     interactionMob = @intFromEnum(Opcode.MOB_INTERACT),
     dropItem = @intFromEnum(Opcode.DROP_ITEM),
-
+    interactGroundItem = @intFromEnum(Opcode.INTERACT_GROUND_ITEM),
     // parse a u16 code to a struct union with correct data
     pub fn parse(code: u16) OpcodeFromClient {
         inline for (std.enums.values(OpcodeFromClient)) |value| {
@@ -182,6 +183,11 @@ pub const PacketChatWhisperInput = extern struct {
 pub const PacketMobInteractInput = extern struct {
     mobId: u16,
     action: u16,
+};
+
+pub const PacketGroundItemInteractInput = extern struct {
+    itemId: u32,
+    state: u32,
 };
 
 const t = std.testing;

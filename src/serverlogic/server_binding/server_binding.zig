@@ -321,11 +321,21 @@ fn lua__spawn_item(L: *State) i32 {
     const state = L.toIntegerOr(u8, -1, 0);
     L.pop(1);
 
+    L.getField(2, "on_interact");
+    if (!L.isType(-1, .Function)) {
+        L.pop(1);
+        L.pushString("spawn_item: 'on_interact' must be a function");
+        return 1;
+    }
+    const onInteract = L.saveRegistry(-1);
+    L.pop(1);
+
     _ = self.world.spawnItem(.{
         .state = state,
         .item = item.*,
         .position = position,
         .rotation = rotation,
+        .onInteract = onInteract,
     }) catch {
         L.pushString("spawn_item: failed to insert item in world");
         return 1;

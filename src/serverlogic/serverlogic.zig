@@ -10,6 +10,7 @@ const Database = @import("database").Database;
 const Allocator = std.mem.Allocator;
 const Dispatcher = @import("dispatcher.zig").Dispatcher;
 const ServerBinding = @import("server_binding/server_binding.zig").ServerBinding;
+const GroundItem = core.domains.GroundItem;
 
 const logger = std.log.scoped(.serverlogic);
 pub const ServerLogic = struct {
@@ -53,7 +54,10 @@ pub const ServerLogic = struct {
         if (message) |input| {
             switch (input.data) {
                 .interactionMob => |req| {
-                    self.callInteract(peer, req.mobId);
+                    self.callInteractMob(peer, req.mobId);
+                },
+                .interactGroundItem => |req| {
+                    self.callInteractGroundItem(peer, @intCast(req.itemId));
                 },
                 else => {},
             }
@@ -61,7 +65,36 @@ pub const ServerLogic = struct {
         return self.dispatcher.dispatch(self.state, peer, message);
     }
 
-    fn callInteract(self: *ServerLogic, peer: *network.Peer, mobId: u16) void {
+    fn callInteractGroundItem(self: *ServerLogic, peer: *network.Peer, itemId: u16) void {
+        const obj = self.world.get(itemId) catch {
+            return;
+        };
+
+        switch (obj.entity) {
+            .item => |item| {
+                execGroundItemInteract(self, item, peer);
+            },
+            else => logger.warn("itemId {d} is not a GroundItem", .{itemId}),
+        }
+    }
+
+    fn execGroundItemInteract(self: *ServerLogic, item: *GroundItem, peer: *network.Peer) void {
+        const L = self.state;
+        L.restoreRegistry(item.onInteract);
+        if (!L.isFunction(-1)) {
+            logger.warn("GroundItem({d}): interacter is not a function", .{item.itemId});
+            L.pop(1);
+            return;
+        }
+        bindings.PeerBinding.newUserdata(L, peer);
+        bindings.GroundItemBinding.newUserdata(L, item);
+        if (!L.pcall(2, 0)) {
+            logger.err("GroundItem({d}): on_interact failed => {s}", .{ item.itemId, L.toString(-1) });
+            L.pop(1);
+        }
+    }
+
+    fn callInteractMob(self: *ServerLogic, peer: *network.Peer, mobId: u16) void {
         const obj = self.world.get(mobId) catch {
             return;
         };

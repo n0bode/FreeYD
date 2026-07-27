@@ -29,6 +29,7 @@ pub const CreateItem = struct {
     position: Position,
     rotation: u8,
     state: u8,
+    onInteract: i32,
 };
 
 pub const World = struct {
@@ -98,6 +99,14 @@ pub const World = struct {
         if (!try self.tree.insert(point)) {
             return error.MobOutOfMap;
         }
+    }
+
+    pub fn getGroundItem(self: *World, id: u16) !*GroundItem {
+        const obj = self.indexes.get(id) orelse return error.ItemNotFound;
+        return switch (obj.entity) {
+            .item => |item| item,
+            else => error.NotAnItem,
+        };
     }
 
     pub fn get(self: *World, id: u16) !*Object {
@@ -203,6 +212,7 @@ pub const World = struct {
             .position = .{ .x = info.position.x, .y = info.position.y },
             .rotation = info.rotation,
             .state = info.state,
+            .onInteract = info.onInteract,
         };
 
         const point = try self.points.create(self.arena.allocator());

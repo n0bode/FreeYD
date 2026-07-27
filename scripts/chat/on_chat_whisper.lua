@@ -4,9 +4,11 @@ local logger = require("logger");
 for key, value in pairs(StorageType) do
     logger:info("StorageType[" .. key .. "] = " .. value)
 end
+
 server:on("on_chat_whisper", function(peer, req)
     logger:info("(" .. peer.peer_id .. ")[" .. req.name .. "]: " .. req.message)
 
+    local world = server:get_world()
     local actions = {
         ["time"] = function()
             local datetime = server:get_local_date();
@@ -81,6 +83,28 @@ server:on("on_chat_whisper", function(peer, req)
                     slot = slot,
                 })
             end
+        end,
+        ["update_ground"] = function()
+            local args = string.gmatch(req.message, "%d+")
+            local item_id = tonumber(args()) or 0
+            if item_id == 0 then
+                peer:send_text("Invalid item_id")
+                return
+            end
+
+            local item = world:get_ground_item(item_id)
+            if not item then
+                peer:send_text("ground item not found")
+                return
+            end
+
+            local last_state = item.state
+            item.state = tonumber(args()) or 0
+            peer:send_command("update_ground_item", {
+                item_id = item.item_id,
+                state = item.state,
+            })
+            peer:send_text("updated item_id " .. item_id .. " state from " .. last_state .. " to " .. item.state)
         end,
         ["create_item"] = function()
             local args = string.gmatch(req.message, "%d+")

@@ -16,6 +16,7 @@ local Server = {}
 ---@overload fun(self: Server, event: "on_move_item",  handler: fun(peer: Peer, req: MoveItemEvent))
 ---@overload fun(self: Server, event: "on_drop_item",  handler: fun(peer: Peer, req: DropItemEvent))
 ---@overload fun(self: Server, event: "on_login", handler: fun(peer: Peer, req: LoginEvent): boolean)
+---@overload fun(self: Server, event: "on_interact_ground_item", handler: fun(peer: Peer, req: LoginEvent): boolean)
 ---@param event string Event name
 ---@param handler fun(peer: Peer, req: any) Callback invoked when the event fires
 function Server:on(event, handler) end
@@ -70,6 +71,7 @@ function Server:create_npc(npc_info) end
 ---@field item Item
 ---@field position Position
 ---@field rotation integer? default 0
+---@field on_interact fun(peer: Peer, item: GroundItem)
 ---@field state integer? default 0
 ---@field height integer? default 1
 ---@field create integer? default 1

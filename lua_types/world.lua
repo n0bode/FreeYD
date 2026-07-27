@@ -10,14 +10,20 @@
 ---@field players_count integer number of player current in server
 local World = {}
 
----list all mobs in world
+---fetch all object in world
 ---@param func fun(mob: SpawnedMob)
-function World:each_mobs(func) end
+function World:each_world(func) end
 
----get all mobs and items within area
+---@enum ObjectType
+local ObjectType = {
+    MOB = 1,
+    ITEM = 2,
+}
+
+---fetch all object in area
 ---@param area QueryArea
----@param func fun(entity: Mob|ItemWorld, position: Position, is_item: boolean)
-function World:each_mobs_in_area(area, func) end
+---@param func fun(entity: Mob|ItemWorld, position: Position, type: ObjectType)
+function World:each_world_in_area(area, func) end
 
 ---@class ItemWorld
 ---@field item_id integer
@@ -27,10 +33,6 @@ function World:each_mobs_in_area(area, func) end
 ---@field height integer
 ---@field state integer
 ---@field create integer
-
----list all items currently in the world
----@param func fun(item: ItemWorld, position: Position)
-function World:list_items(func) end
 
 ---add spawn new mob in world
 ---@param mob Mob

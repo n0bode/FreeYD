@@ -51,29 +51,30 @@ server:on("on_teleport", function(peer, req)
 
         local mob_player = peer:get_player_mob()
         world:move(peer.peer_id, dest.x, dest.y)
-        queries.teleport(origin, dest, function(result, is_dest)
-            local position = { x = result.position.x, y = result.position.y }
+        queries.teleport(origin, dest, function(object, is_dest)
+            local position = { x = object.position.x, y = object.position.y }
 
-            if result.is_item then
+            if object.type == 3 then
+                local item = object.result.item
                 if not is_dest then
-                    peer:send_command("delete_item", { item_id = result.item.item_id })
+                    peer:send_command("delete_item", { item_id = item.item_id })
                 else
                     peer:send_command("create_item", {
-                        item_id = result.item.item_id,
-                        item = result.item.item,
+                        item_id = item.item_id,
+                        item = item.item,
                         position = position,
-                        rotate = result.item.rotation,
-                        state = result.item.state,
+                        rotate = item.rotation,
+                        state = item.state,
                     })
                 end
                 return
             end
 
-            local mob = result.mob
+            local mob = object.result.mob
             -- origin
             if not is_dest then
-                if result.is_player then
-                    local another = result.peer
+                if object.type == 2 then
+                    local another = object.result.peer
                     logger:info("send to " .. another.peer_id)
                     -- is mine
                     if another == peer then
@@ -90,8 +91,8 @@ server:on("on_teleport", function(peer, req)
                 })
             else
                 --dest
-                if result.is_player then
-                    local another = result.peer
+                if object.type == 2 then
+                    local another = object.result.peer
                     logger:info("send to " .. another.peer_id)
                     -- is mine
                     if another == peer then

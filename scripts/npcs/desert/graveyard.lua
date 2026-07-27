@@ -50,8 +50,12 @@ server:create_npc {
         end
 
         local dest = { x = 2397, y = 2104 };
-        queries.in_areas(position, dest, only_players, function(result)
-            local another_peer = result.peer
+        queries.teleport(position, dest, function(object, is_dest)
+            if not object.type == 2 then
+                return
+            end
+
+            local another_peer = object.result.peer
             another_peer:send_command("motion_mob", {
                 mob_id = peer.peer_id,
                 kind = 1,

@@ -1,7 +1,6 @@
 local server = require("server")
 local logger = require("logger")
 local query = require("scripts.utils.queries")
-local view = require("scripts.utils.view")
 
 server:on("on_spawn_char", function(peer, req)
     local db = server:get_database()
@@ -34,10 +33,10 @@ server:on("on_spawn_char", function(peer, req)
 
     local player_mob = peer:get_player_mob()
 
-    query.in_area(last_position, nil, function(result)
-        local position = { x = result.position.x, y = result.position.y }
-        if result.is_player then
-            local another = result.peer
+    query.in_area(last_position, nil, function(object)
+        local position = { x = object.position.x, y = object.position.y }
+        if object.type == 2 then
+            local another = object.result.peer
             -- notify another player create a mob
             if peer == another then
                 return
@@ -51,23 +50,22 @@ server:on("on_spawn_char", function(peer, req)
             })
         end
 
-
-        if result.is_item then
-            logger:info("notify peer " .. peer.peer_id .. " to spawn item " .. result.item.item_id)
+        if object.type == 3 then
+            local item = object.result.item
+            logger:info("notify peer " .. peer.peer_id .. " to spawn item " .. item.item_id)
             peer:send_command("create_item", {
                 position = position,
-                item_id = result.item.item_id,
-                item = result.item,
-                rotate = 0,
-                height = 1,
-                state = 1,
-                create = 1,
+                item_id = item.item_id,
+                item = item.item,
+                rotate = item.rotation,
+                state = item.state,
             })
         else
+            local mob = object.result.mob
             peer:send_command("spawn_mob", {
-                position = { x = result.position.x, y = result.position.y },
-                owner_id = result.mob.mob_id,
-                mob = result.mob,
+                position = position,
+                owner_id = mob.mob_id,
+                mob = mob,
             })
         end
     end)

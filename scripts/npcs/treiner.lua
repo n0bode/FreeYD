@@ -33,16 +33,15 @@ server:create_npc {
         npc.current_position.x = dest.x
         npc.current_position.y = dest.y
 
-        queries.in_areas(start, dest, nil, function(result)
-            if result.is_player then
-                result.peer:send_command("motion_mob", {
-                    origin = { x = start.x, y = start.y },
-                    kind = 0,
-                    speed = 2,
-                    mob_id = npc.id,
-                    destination = { x = dest.x, y = dest.y },
-                })
-            end
+        queries.players_in_area(dest, function(player, position)
+            local another = player.peer
+            another:send_command("motion_mob", {
+                origin = { x = start.x, y = start.y },
+                kind = 0,
+                speed = 2,
+                mob_id = npc.id,
+                destination = { x = dest.x, y = dest.y },
+            })
         end)
     end
 }

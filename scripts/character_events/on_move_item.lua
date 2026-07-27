@@ -1,6 +1,11 @@
 local server = require("server");
 local queries = require("scripts.utils.queries")
 
+---@param result QueryResult
+local only_players = function(result)
+    return result.type == queries.QueryResultType.PLAYER_MOB
+end
+
 server:on("on_move_item", function(peer, req)
     -- same slot
     if req.source_storage == req.dest_storage and req.source_slot == req.dest_slot then
@@ -41,17 +46,22 @@ server:on("on_move_item", function(peer, req)
         mob_id = peer.peer_id,
         item = item_dest,
     })
+
+    local world = server:get_world()
     -- update mob near
     if changedMob then
-        local player_mob = peer:get_player_mob()
-        local position = { x = player_mob.x, y = player_mob.y }
-        local only_players = function(result)
-            return result.is_player
+        local player_pos = world:get_position(peer.peer_id)
+        if not player_pos then
+            peer:send_text("server error: player position not found")
+            peer:disconnect()
+            return
         end
 
+        local player_mob = peer:get_player_mob()
+        local position = { x = player_pos.x, y = player_pos.y }
         queries.in_area(position, only_players,
-            function(result)
-                local another_peer = result.peer
+            function(object)
+                local another_peer = object.result.peer
                 another_peer:send_command("update_equipments", {
                     mob = player_mob,
                 })

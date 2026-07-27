@@ -2,10 +2,6 @@ local server = require("server")
 local logger = require("logger")
 local queries = require("scripts.utils.queries")
 
-local function only_players_in_area(result)
-    return result.is_player
-end
-
 server:on("on_disconnected", function(peer)
     logger:info("peer disconnected: " .. peer.peer_id)
     local db = server:get_database()
@@ -20,9 +16,8 @@ server:on("on_disconnected", function(peer)
         world:remove(peer.peer_id)
         logger:debug("peer " .. peer.peer_id .. " position: " .. pos.x .. "," .. pos.y)
 
-
-        queries.in_area(pos, only_players_in_area, function(result)
-            local another_peer = result.peer
+        queries.players_in_area(pos, function(player, position)
+            local another_peer = player.peer
             if another_peer == peer then
                 return
             end

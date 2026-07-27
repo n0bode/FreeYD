@@ -5,49 +5,45 @@ local query = require("scripts.utils.queries")
 server:on("on_motion_mob", function(peer, req)
     local map = server:get_world()
 
-    local position = map:get_position(peer.peer_id)
-    if not position then
+    local current_position = map:get_position(peer.peer_id)
+    if not current_position then
         logger:error("peer " .. peer.peer_id .. " has no position")
         return
     end
-
-    local last_pos = { x = position.x, y = position.y }
 
     -- move player in world
     local player_mob = peer:get_player_mob()
     map:move(peer.peer_id, req.destination.x, req.destination.y)
 
-    local pos = map:get_position(peer.peer_id)
-    if pos then
-        logger:info("peer " .. peer.peer_id .. " moved to " .. pos.x .. "," .. pos.y)
-    else
-        logger:error("peer " .. peer.peer_id .. " has no position after move")
-    end
-
+    local last_pos = { x = current_position.x, y = current_position.y }
     local dest = { x = req.destination.x, y = req.destination.y };
-    query.in_areas(req.origin, dest, nil, function(result)
-        if result.is_item then
-            if result.location == 1 then
-                peer:send_command("delete_item", { item_id = result.item.item_id })
-            elseif result.location == 2 then
+
+    query.in_areas(last_pos, dest, nil, function(object)
+        local position = { x = object.position.x, y = object.position.y }
+        if object.type == 3 then
+            local item = object.result.item
+            if object.location == 1 then
+                peer:send_command("delete_item", { item_id = item.item_id })
+            elseif object.location == 2 then
                 peer:send_command("create_item", {
-                    item_id = result.item.item_id,
-                    item = result.item.item,
-                    position = { x = result.position.x, y = result.position.y },
-                    rotate = result.item.rotation,
-                    state = result.item.state,
+                    item_id = item.item_id,
+                    item = item.item,
+                    position = position,
+                    rotate = item.rotation,
+                    state = item.state,
                 })
             end
             return
         end
 
-        if result.is_player then
-            local another_peer = result.peer
+        local mob = object.result.mob
+        if object.type == 2 then
+            local another_peer = object.result.peer
             if another_peer == peer then
                 return
             end
 
-            if result.location == 0 then
+            if object.location == 0 then
                 another_peer:send_command("motion_mob", {
                     origin = position,
                     kind = req.kind,
@@ -58,7 +54,7 @@ server:on("on_motion_mob", function(peer, req)
                 return
             end
 
-            if result.location == 1 then
+            if object.location == 1 then
                 logger:info("delete mob to " .. another_peer.peer_id)
                 another_peer:send_command("delete_mob", {
                     mob_id = peer.peer_id,
@@ -77,9 +73,9 @@ server:on("on_motion_mob", function(peer, req)
             })
         end
         peer:send_command("spawn_mob", {
-            position = { x = result.position.x, y = result.position.y },
-            owner_id = result.mob.mob_id,
-            mob = result.mob,
+            position = { x = object.position.x, y = object.position.y },
+            owner_id = mob.mob_id,
+            mob = mob,
         })
     end)
 end)

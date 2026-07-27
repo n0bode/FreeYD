@@ -35,14 +35,28 @@ local function location_id(dest, src, point)
     end
 end
 
----@class QueryResult
----@field location integer
----@field position Position
----@field is_player boolean
----@field is_item boolean
+---@class PlayerMobResult
 ---@field peer Peer
 ---@field mob Mob
+
+---@class MobResult
+---@field mob Mob
+
+---@class GroundItemResult
 ---@field item ItemWorld
+
+---@enum QueryResultType
+local QueryResultType = {
+    MOB = 1,
+    PLAYER_MOB = 2,
+    ITEM = 3,
+}
+
+---@class QueryResult
+---@field type QueryResultType
+---@field position Position
+---@field location integer
+---@field result MobResult|PlayerMobResult|GroundItemResult
 local QueryResult = {}
 
 ---@param src  {x: integer, y: integer}
@@ -68,35 +82,36 @@ local function query_areas(src, dest, filter, func)
 
     local r_total = union_area(r_src, r_dest)
     local map = server:get_world()
-    map:each_mobs_in_area(r_total, function(entity, position, is_item)
+    map:each_world_in_area(r_total, function(entity, position, type)
         local location = location_id(r_dest, r_src, position)
         -- outside of both areas, no need to send
         if location == 3 then
             return
         end
 
-        local result
-        if is_item then
-            result = {
-                location = location,
-                position = position,
-                is_player = false,
-                is_item = true,
-                peer = nil,
-                mob = nil,
+        local result = {
+            location = location,
+            position = position,
+        }
+
+        if type == 1 then
+            result["type"] = QueryResultType.ITEM
+            result["result"] = {
                 item = entity,
             }
         else
-            logger:info("mob (" .. entity.mob_id .. ")")
-            result = {
-                location = location,
-                position = position,
-                is_player = is_player(entity.mob_id),
-                is_item = false,
-                peer = server:get_peer(entity.mob_id),
-                mob = entity,
-                item = nil,
-            }
+            if is_player(entity.mob_id) then
+                result["type"] = QueryResultType.PLAYER_MOB
+                result["result"] = {
+                    mob = entity,
+                    peer = server:get_peer(entity.mob_id)
+                }
+            else
+                result["type"] = QueryResultType.MOB
+                result["result"] = {
+                    mob = entity,
+                }
+            end
         end
 
         if (not filter) or filter(result) then
@@ -126,8 +141,34 @@ local function query_teleport(origin, dest, callback)
     end)
 end
 
+
+---@param src  {x: integer, y: integer}
+---@param func fun(player: PlayerMobResult, position: Position)
+local function players_in_area(src, func)
+    query_area(src, function(result)
+        return result.type == QueryResultType.PLAYER_MOB
+    end, function(result)
+        func(result.result, result.position)
+    end)
+end
+
+---@param src  {x: integer, y: integer}
+---@param dest  {x: integer, y: integer}
+---@param func fun(player: PlayerMobResult, position: Position, location: integer)
+local function players_in_areas(src, dest, func)
+    query_areas(src, dest, function(result)
+        return result.type == QueryResultType.PLAYER_MOB
+    end, function(result)
+        func(result.result, result.position, result.location)
+    end)
+end
+
 return {
     in_areas = query_areas,
     in_area = query_area,
+    players_in_area = players_in_area,
+    players_in_areas = players_in_areas,
     teleport = query_teleport,
+    QueryResultType = QueryResultType,
+    QueryResult = QueryResult,
 }

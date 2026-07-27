@@ -38,21 +38,15 @@ pub fn bind(L: *lua.State) void {
 
     utils.bindFunctions(L, metatableName, &.{
         .{
-            .name = "list_items",
+            .name = "each_world",
             .value = .{
-                .func = .{ .func = lua__list_items },
+                .func = .{ .func = lua__each_world },
             },
         },
         .{
-            .name = "each_mobs",
+            .name = "each_world_in_area",
             .value = .{
-                .func = .{ .func = lua__each_mobs },
-            },
-        },
-        .{
-            .name = "each_mobs_in_area",
-            .value = .{
-                .func = .{ .func = lua__each_mobs_in_area },
+                .func = .{ .func = lua__each_world_in_area },
             },
         },
         .{
@@ -87,7 +81,7 @@ fn lua__list_items(L: *lua.State) i32 {
     return 0;
 }
 
-fn lua__each_mobs(L: *lua.State) i32 {
+fn lua__each_world(L: *lua.State) i32 {
     const self: *core.World = mapper.toUserdata(L, 1) orelse {
         L.pushNil();
         return 1;
@@ -104,7 +98,7 @@ fn lua__each_mobs(L: *lua.State) i32 {
         .y = 0,
         .width = 4096,
         .height = 4096,
-    }, &ptr, wrap_eachMob);
+    }, &ptr, wrap_eachWorld);
 
     L.removeRegistry(ptr.fnIndex);
     return 0;
@@ -172,29 +166,14 @@ const pFnLua = struct {
     fnIndex: i32,
 };
 
-fn call_eachItem(L: *lua.State, fnIndex: i32, point: *Point, item: *core.domains.WorldItem) void {
-    L.restoreRegistry(fnIndex);
-    if (!L.isType(-1, .Function)) {
-        L.pop(1);
-        return;
-    }
-    WorldItemBinding.newUserdata(L, item);
-    PointBinding.newUserdata(L, point);
-    if (!L.pcall(2, 0)) {
-        std.log.err("failed to call list_items: {s}", .{L.toString(-1)});
-        L.pop(1);
-        return;
-    }
-}
-
-fn wrap_eachMob(ptr: *anyopaque, point: *Point) void {
+fn wrap_eachWorld(ptr: *anyopaque, point: *Point) void {
     const self: *pFnLua = @ptrCast(@alignCast(ptr));
 
     const obj: *Object = @fieldParentPtr("point", point);
     switch (obj.entity) {
         .npc => |npc| call_eachMob(self.L, self.fnIndex, point, npc.mob),
         .mob => |mob| call_eachMob(self.L, self.fnIndex, point, mob),
-        .item => |item| call_eachWorldItemInArea(self.L, self.fnIndex, point, item),
+        .item => |item| call_eachItem(self.L, self.fnIndex, point, item),
     }
 }
 
@@ -207,7 +186,7 @@ fn call_eachMob(L: *lua.State, fnIndex: i32, point: *Point, mob: *core.Mob) void
 
     MobBinding.newUserdata(L, mob);
     PointBinding.newUserdata(L, point);
-    L.pushBool(false);
+    L.pushInteger(0);
     if (!L.pcall(3, 0)) {
         std.log.err("failed to call eachMob: {s}", .{L.toString(-1)});
         L.pop(1);
@@ -215,7 +194,7 @@ fn call_eachMob(L: *lua.State, fnIndex: i32, point: *Point, mob: *core.Mob) void
     }
 }
 
-fn call_eachWorldItemInArea(L: *lua.State, fnIndex: i32, point: *Point, item: *WorldItem) void {
+fn call_eachItem(L: *lua.State, fnIndex: i32, point: *Point, item: *WorldItem) void {
     L.restoreRegistry(fnIndex);
     if (!L.isType(-1, .Function)) {
         L.pop(1);
@@ -224,7 +203,7 @@ fn call_eachWorldItemInArea(L: *lua.State, fnIndex: i32, point: *Point, item: *W
 
     WorldItemBinding.newUserdata(L, item);
     PointBinding.newUserdata(L, point);
-    L.pushBool(true);
+    L.pushInteger(1);
     if (!L.pcall(3, 0)) {
         std.log.err("failed to call eachMob (item): {s}", .{L.toString(-1)});
         L.pop(1);
@@ -232,7 +211,7 @@ fn call_eachWorldItemInArea(L: *lua.State, fnIndex: i32, point: *Point, item: *W
     }
 }
 
-fn lua__each_mobs_in_area(L: *lua.State) i32 {
+fn lua__each_world_in_area(L: *lua.State) i32 {
     const self: *core.World = mapper.toUserdata(L, 1) orelse {
         L.pushNil();
         return 1;
@@ -270,7 +249,7 @@ fn lua__each_mobs_in_area(L: *lua.State) i32 {
         .y = y,
         .width = width,
         .height = height,
-    }, &ptr, wrap_eachMob);
+    }, &ptr, wrap_eachWorld);
 
     L.removeRegistry(ptr.fnIndex);
     return 0;

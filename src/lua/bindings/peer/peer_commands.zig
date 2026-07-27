@@ -360,7 +360,7 @@ fn createItem(peer: *Peer, L: *State) void {
     const state = L.toIntegerOr(u8, -1, 0);
     L.pop(1);
 
-    var pack = builders.buildItemCreate(position, itemId, item.*, rotate, state);
+    var pack = builders.buildCreateGroundItem(position, itemId, item.*, rotate, state);
     injectOptions(L, &pack.header);
     peer.sendPacket(&pack) catch {};
 }

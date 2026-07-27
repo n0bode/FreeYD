@@ -331,7 +331,7 @@ fn lua__spawn_item(L: *State) i32 {
         return 1;
     };
 
-    var pack = network.builders.buildItemCreate(position, item.itemID, item.*, rotation, state);
+    var pack = network.builders.buildCreateGroundItem(position, item.itemID, item.*, rotation, state);
 
     for (self.server.peers) |peer_opt| {
         const peer = peer_opt orelse continue;

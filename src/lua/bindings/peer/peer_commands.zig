@@ -327,7 +327,7 @@ fn itemDelete(peer: *Peer, L: *State) void {
     L.getField(3, "item_id");
     const itemId = L.checkInteger(u16, -1);
     L.pop(1);
-    var pack = builders.buildDeleteItem(itemId);
+    var pack = builders.buildDeleteGroundItem(itemId);
     peer.sendPacket(&pack) catch {};
 }
 

@@ -80,7 +80,6 @@ pub fn QuadTree(capacity: comptime_int) type {
                 self.items.push(pos) catch {
                     return false;
                 };
-                std.log.info("inserted({d},{d})", .{ pos.x, pos.y });
                 pos.node = self;
 
                 return true;

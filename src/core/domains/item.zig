@@ -12,7 +12,7 @@ pub const Item = extern struct {
     attributes: [3]ItemAttribute = [_]ItemAttribute{.{}} ** 3,
 };
 
-pub const WorldItem = extern struct {
+pub const GroundItem = extern struct {
     itemId: u16,
     item: Item,
     position: Position,

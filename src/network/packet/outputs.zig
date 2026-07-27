@@ -22,7 +22,7 @@ pub const PacketData = union(OpcodeToClient) {
     charCreated: PacketCharCreateOuput,
     charDeleted: PacketCharDeleteOutput,
     charSpawn: PacketCharSpawnOutput,
-    itemCreate: PacketItemCreateOutput,
+    itemCreate: PacketCreateGroundItemOutput,
     messageText: PacketMessageTextOutput,
 };
 
@@ -156,7 +156,7 @@ pub const StorageType = enum(u8) {
     cargo = 2,
 };
 
-pub const PacketItemCreateOutput = extern struct {
+pub const PacketCreateGroundItemOutput = extern struct {
     header: Header,
     position: PositionData,
     itemId: u16,
@@ -522,7 +522,7 @@ pub const PacketDropItemOutput = extern struct {
     itemID: u16,
 };
 
-pub const PacketDeleteItemOutput = extern struct {
+pub const PacketDeleteGroundItemOutput = extern struct {
     header: Header,
     itemId: u16,
     dunno: u16,

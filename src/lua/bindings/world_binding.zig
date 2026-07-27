@@ -5,7 +5,7 @@ const std = @import("std");
 const World = core.World;
 const Point = core.Point;
 const Object = core.Object;
-const WorldItem = core.domains.WorldItem;
+const GroundItem = core.domains.GroundItem;
 const MobBinding = bindings.MobBinding;
 
 const lua = bindings.lua;
@@ -15,7 +15,7 @@ const mapper = utils.MapperStructPtr(World);
 
 pub const WorldBinding = @This();
 pub const PointBinding = utils.MapperStructPtr(Point);
-pub const WorldItemBinding = utils.MapperStructPtr(WorldItem);
+pub const WorldItemBinding = utils.MapperStructPtr(GroundItem);
 
 pub const metatableName = mapper.metatableName;
 
@@ -194,7 +194,7 @@ fn call_eachMob(L: *lua.State, fnIndex: i32, point: *Point, mob: *core.Mob) void
     }
 }
 
-fn call_eachItem(L: *lua.State, fnIndex: i32, point: *Point, item: *WorldItem) void {
+fn call_eachItem(L: *lua.State, fnIndex: i32, point: *Point, item: *GroundItem) void {
     L.restoreRegistry(fnIndex);
     if (!L.isType(-1, .Function)) {
         L.pop(1);

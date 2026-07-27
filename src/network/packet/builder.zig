@@ -121,14 +121,14 @@ pub fn buildChatMessage(
     return self;
 }
 
-pub fn buildItemCreate(
+pub fn buildCreateGroundItem(
     position: Position,
     itemId: u16,
     item: Item,
     rotate: u8,
     state: u8,
-) packets.PacketItemCreateOutput {
-    return packets.PacketItemCreateOutput{
+) packets.PacketCreateGroundItemOutput {
+    return packets.PacketCreateGroundItemOutput{
         .header = .{
             .operationCode = @intFromEnum(Opcode.CREATE_ITEM),
         },
@@ -161,8 +161,8 @@ pub fn buildItemDrop(
     };
 }
 
-pub fn buildDeleteItem(itemId: u16) packets.PacketDeleteItemOutput {
-    return packets.PacketDeleteItemOutput{
+pub fn buildDeleteGroundItem(itemId: u16) packets.PacketDeleteGroundItemOutput {
+    return packets.PacketDeleteGroundItemOutput{
         .header = .{
             .operationCode = @intFromEnum(Opcode.DECAY_ITEM),
         },

@@ -126,7 +126,6 @@ pub fn EnumMapper(comptime T: anytype) type {
                     inline for (std.meta.fields(T)) |field| {
                         L.pushInteger(field.value);
                         L.setField(-2, field.name);
-                        std.debug.print("{s} = {d}\n", .{ field.name, field.value });
                     }
                     L.setGlobal(enumName);
                 },

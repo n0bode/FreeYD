@@ -10,7 +10,7 @@ pub const Object = entity.Object;
 const Point = core.Point;
 const Position = domains.Position;
 const Item = domains.Item;
-const WorldItem = domains.WorldItem;
+const GroundItem = domains.GroundItem;
 const Mob = domains.Mob;
 const NPC = domains.NPC;
 
@@ -36,7 +36,7 @@ pub const World = struct {
 
     npcs: std.ArrayList(NPC),
     mobs: std.ArrayList(Mob),
-    items: std.ArrayList(WorldItem),
+    items: std.ArrayList(GroundItem),
     points: std.heap.MemoryPool(Object),
     indexes: std.AutoHashMap(u16, *Object),
 

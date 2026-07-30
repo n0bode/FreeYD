@@ -120,6 +120,8 @@ server:on("on_chat_whisper", function(peer, req)
                 rotation = 0,
                 state = 1,
                 height = tonumber(args()) or 1,
+                on_interact = function(peer, item)
+                end,
                 create = 1,
             }
         end,
@@ -134,6 +136,10 @@ server:on("on_chat_whisper", function(peer, req)
             local char = peer:get_player_mob()
 
             local position = world:get_position(peer.peer_id)
+            if not position then
+                return
+            end
+
             world:move(peer.peer_id, x, y)
             peer:send_command("motion_mob", {
                 origin = { x = position.x, y = position.y },

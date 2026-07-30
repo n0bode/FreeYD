@@ -14,7 +14,7 @@ server:on("on_spawn_char", function(peer, req)
 
     local char = account:get_character(req.char_slot)
     if not char then
-        logger:error("character not found in slot " .. req.char_slot .. ": " .. (err or "unknown error"))
+        logger:error("character not found in slot " .. req.char_slot)
         peer:disconnect()
         return
     end
@@ -53,7 +53,7 @@ server:on("on_spawn_char", function(peer, req)
         if object.type == 3 then
             local item = object.result.item
             logger:info("notify peer " .. peer.peer_id .. " to spawn item " .. item.item_id)
-            peer:send_command("create_item", {
+            peer:send_command("create_ground_item", {
                 position = position,
                 item_id = item.item_id,
                 item = item.item,

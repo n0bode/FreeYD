@@ -39,7 +39,7 @@ server:on("on_teleport", function(peer, req)
     teleports:query_at(origin.x, origin.y, function(dest)
         peer:send_command("motion_mob", {
             origin = origin,
-            er_id,
+            peer_id = peer.peer_id,
             kind = 1,
             speed = 0,
             mob_id = peer.peer_id,
@@ -67,9 +67,8 @@ server:on("on_teleport", function(peer, req)
                     if item.state == 1 then
                         peer:send_command("update_ground_item", {
                             item_id = item.item_id,
-                            state = item.state,
-                            z
-                    /)
+                            state = item.state
+                        })
                     end
                 end
                 return

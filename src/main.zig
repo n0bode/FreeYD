@@ -84,22 +84,24 @@ pub fn main(init: Init) !void {
     try args.parse(init.minimal.args.iterate(), &config);
     captureSignal();
 
-    const MAX_PLAYERS: usize = ParseEnv.getEnv(usize, init.environ_map, "MAX_PLAYERS", 1000);
+    const MAX_PLAYERS = ParseEnv.getEnv(u16, init.environ_map, "MAX_PLAYERS", 1000);
+    const MAX_MOBS = ParseEnv.getEnv(u16, init.environ_map, "MAX_MOBS", 10_000);
+    const MAX_ITEMS = ParseEnv.getEnv(u16, init.environ_map, "MAX_ITEMS", 1000);
 
     var arena = std.heap.ArenaAllocator.init(init.gpa);
     const allocator = arena.allocator();
     defer arena.deinit();
 
     var database = FileDB.init("dbs");
-    const L = try lua.State.init(allocator);
     var server: Server = try Server.init(allocator, config.config);
 
     var serverLogic = try ServerLogic.init(
         allocator,
         &server,
         database.interface(),
-        L,
         MAX_PLAYERS,
+        MAX_MOBS,
+        MAX_ITEMS,
     );
 
     defer serverLogic.deinit();

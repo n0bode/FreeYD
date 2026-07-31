@@ -2,12 +2,21 @@ local server = require("server");
 local logger = require("logger");
 local queries = require("scripts.utils.queries")
 
+local texts = {
+    [1] = "Malditos são essas mortos vivos!",
+    [2] = "Preciso de ajuda para me livrar desses mortos vivos.",
+    [3] = "Parece que eles têm um chefe",
+}
+
 server:create_npc {
     name = "Coveiro",
+    tick = 30e3,
     position = { x = 2372, y = 2099 },
-    on_interact = function(npc, peer)
+    on_interact = function(ctx, peer)
         local world = server:get_world()
         local mob = peer:get_player_mob()
+
+        local graveyard = ctx.mob
         local position = world:get_position(mob.mob_id)
         if not position then
             logger:error("peer " .. peer.peer_id .. " has no position")
@@ -15,35 +24,33 @@ server:create_npc {
             return
         end
 
-        local only_players = function(result)
-            return result.is_player
-        end
-
         local level = mob.stats.level
         if level < 40 then
             peer:send_command("chat_message", {
                 message = "You need to be more experienced to receive my help.",
-                mob_id = npc.id,
+                mob_id = graveyard.mob_id,
                 type = 0,
             })
             return
         end
 
         if level > 115 then
-            queries.in_area(position, only_players, function(result)
-                peer:send_command("chat_message", {
+            queries.players_in_area(position, function(result)
+                local another = result.peer
+                another:send_command("chat_message", {
                     message = "Thank you for your help, but now I can take care of myself.",
-                    mob_id = npc.id,
+                    mob_id = graveyard.mob_id,
                     type = 0,
                 })
             end)
             return
         end
 
-        if math.abs(npc.start_position.x - position.x) > 3 or math.abs(npc.start_position.y - position.y) > 3 then
+        local start = ctx.start_position
+        if math.abs(start.x - position.x) > 3 or math.abs(start.y - position.y) > 3 then
             peer:send_command("chat_message", {
                 message = "I cannot hear you from here. Please come closer.",
-                mob_id = npc.id,
+                mob_id = graveyard.mob_id,
                 type = 0,
             })
             return
@@ -73,6 +80,15 @@ server:create_npc {
         [EquipmentSlot.gloves] = Item.new(104, { index = 43, value = 6 }),
         [EquipmentSlot.weapon] = Item.new(726, { index = 43, value = 9 }),
     },
-    on_update = function(npc, server_time)
+    on_update = function(ctx)
+        local text = texts[math.random(1, #texts)]
+        queries.players_in_area(ctx.start_position, function(result)
+            local peer = result.peer
+            peer:send_command("chat_message", {
+                message = text,
+                mob_id = ctx.mob.mob_id,
+                type = 0,
+            })
+        end)
     end
 }

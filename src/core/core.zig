@@ -7,7 +7,7 @@ pub const Point = WorldTree.Point;
 
 const world = @import("world/world.zig");
 pub const World = world.World;
-pub const Object = world.Object;
+pub const Spawned = world.Spawned;
 
 pub const NPC = domains.NPC;
 pub const Mob = domains.Mob;

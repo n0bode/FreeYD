@@ -6,7 +6,7 @@ const domains = core.domains;
 const WorldTree = core.WorldTree;
 const Allocator = std.mem.Allocator;
 
-pub const Object = entity.Object;
+pub const Spawned = entity.Spawned;
 const Point = core.Point;
 const Position = domains.Position;
 const Item = domains.Item;
@@ -16,9 +16,12 @@ const NPC = domains.NPC;
 
 const MAX_PLAYERS = 1000;
 
+const logger = std.log.scoped(.world);
+
 pub const CreateNPC = struct {
     name: []const u8,
     position: Position,
+    tick: u32,
     onUpdate: i32,
     onInteract: i32,
     equipments: [16]Item,
@@ -35,29 +38,54 @@ pub const CreateItem = struct {
 pub const World = struct {
     arena: std.heap.ArenaAllocator,
 
-    npcs: std.ArrayList(NPC),
-    mobs: std.ArrayList(Mob),
+    mobs: std.heap.MemoryPool(Mob),
     items: std.ArrayList(GroundItem),
-    points: std.heap.MemoryPool(Object),
-    indexes: std.AutoHashMap(u16, *Object),
+    points: std.heap.MemoryPool(Spawned),
+    indexes: std.AutoHashMap(u16, *Spawned),
 
     tree: WorldTree,
-    maxPlayers: usize,
 
-    pub fn init(child_allocator: Allocator, maxPlayers: usize) !World {
+    maxPlayers: u16,
+    maxMobs: u16,
+    maxItems: u16,
+
+    countMobs: std.atomic.Value(u16),
+    countItems: std.atomic.Value(u16),
+
+    pub fn init(
+        child_allocator: Allocator,
+        maxPlayers: u16,
+        maxMobs: u16,
+        maxItems: u16,
+    ) !World {
         var self: World = undefined;
         self.arena = std.heap.ArenaAllocator.init(child_allocator);
 
+        const itemIndex, var overflow = @addWithOverflow(maxPlayers, maxMobs);
+        if (overflow == 1) {
+            return error.MaxPlayersAndMobsOverflow;
+        }
+
+        _, overflow = @addWithOverflow(itemIndex, maxItems);
+        if (overflow == 1) {
+            return error.MaxPlayersAndMobsOverflow;
+        }
+
         self.indexes = .init(child_allocator);
-        self.maxPlayers = maxPlayers;
         // map size
         self.tree = .init(child_allocator, 4096);
         // init with 1000 mobs
         // important: more mobs, needs heap invoke commands
-        self.mobs = try .initCapacity(child_allocator, 1000);
-        self.items = try .initCapacity(child_allocator, 100);
-        self.npcs = try .initCapacity(child_allocator, 100);
-        self.points = try .initCapacity(child_allocator, 1000);
+        self.mobs = try .initCapacity(child_allocator, maxMobs);
+        self.items = try .initCapacity(child_allocator, maxItems);
+        self.points = try .initCapacity(child_allocator, maxMobs);
+
+        self.countMobs = .init(maxPlayers);
+        self.countItems = .init(itemIndex);
+
+        self.maxPlayers = maxPlayers;
+        self.maxItems = maxItems;
+        self.maxMobs = maxMobs;
         return self;
     }
 
@@ -109,13 +137,13 @@ pub const World = struct {
         };
     }
 
-    pub fn get(self: *World, id: u16) !*Object {
+    pub fn get(self: *World, id: u16) !*Spawned {
         return self.indexes.get(id) orelse {
             return error.MobNotFound;
         };
     }
 
-    pub fn createNPC(self: *World, info: CreateNPC) !*NPC {
+    pub fn createNPC(self: *World, info: CreateNPC) !*Spawned {
         var mobBase = Mob{};
         @memcpy(mobBase.name[0..info.name.len], info.name[0..]);
         for (info.equipments, 0..) |item, i| {
@@ -126,56 +154,57 @@ pub const World = struct {
             }
         }
 
-        const mob = try self.mobAlloc(&mobBase);
+        const allocator = self.arena.allocator();
+        const mob = try self.mobAlloc(allocator, &mobBase, true);
+        errdefer self.mobs.destroy(@alignCast(mob));
+
+        const spawned = try self.points.create(allocator);
+        errdefer self.points.destroy(spawned);
+
         const position = info.position;
-
-        var npc: NPC = undefined;
         mob.stats.state.merchant = 1;
-        npc.id = mob.mobId;
-        npc.mob = mob;
-        npc.startPosition = position;
-        npc.currentPosition = position;
-        npc.updatedAt = 0;
-        npc.regOnUpdate = info.onUpdate;
-        npc.regOnInteract = info.onInteract;
-
-        @memset(npc.name[0..], 0);
-        @memcpy(npc.name[0..info.name.len], info.name[0..]);
-
-        self.npcs.appendAssumeCapacity(npc);
-        const pNPC = &self.npcs.items[self.npcs.items.len - 1];
-
-        const point = try self.points.create(self.arena.allocator());
-        point.* = .{
-            .entity = .{ .npc = pNPC },
+        spawned.* = .{
+            .startPosition = .{ .x = position.x, .y = position.y },
+            .onInteract = info.onInteract,
+            .onUpdate = info.onUpdate,
+            .tick = info.tick,
+            .entity = .{ .mob = mob },
             .point = .{ .x = position.x, .y = position.y },
         };
 
-        try self.indexes.put(mob.mobId, point);
-        std.log.info("ptr {X}", .{@intFromPtr(point)});
-        if (!try self.tree.insert(&point.point)) {
-            _ = self.npcs.pop();
+        // must be 1 to interact with npc
+
+        const len = @min(info.name.len, mob.name.len);
+        @memset(mob.name[0..], 0);
+        @memcpy(mob.name[0..len], info.name[0..len]);
+
+        try self.indexes.put(mob.mobId, spawned);
+        if (!try self.tree.insert(&spawned.point)) {
             return error.MobOutOfMap;
         }
-        return pNPC;
+        return spawned;
     }
 
-    pub fn mobAlloc(self: *World, mobBase: *Mob) !*Mob {
-        //mutex?
-        const index = self.mobs.items.len;
-        self.mobs.appendAssumeCapacity(mobBase.*);
+    fn mobAlloc(self: *World, allocator: Allocator, mobBase: *Mob, generateId: bool) !*Mob {
+        const mob = self.mobs.create(allocator) catch |err| {
+            logger.err("failed to allocate mob: {s}", .{@errorName(err)});
+            return err;
+        };
 
-        const mob = &self.mobs.items[index];
-        mob.mobId = @as(u16, @intCast(index)) + @as(u16, @intCast(self.maxPlayers));
+        mob.* = mobBase.*;
+        if (generateId)
+            mob.mobId = self.countMobs.fetchAdd(1, .monotonic);
         return mob;
     }
 
-    pub fn spawnMobWithId(self: *World, mobBase: *Mob, id: u16, x: i16, y: i16) !*Object {
-        const mob = try self.mobAlloc(mobBase);
+    pub fn spawnMobWithId(self: *World, mobBase: *Mob, id: u16, x: i16, y: i16) !*Spawned {
+        const allocator = self.arena.allocator();
+        const mob = try self.mobAlloc(allocator, mobBase, false);
         mob.mobId = id;
 
         const point = try self.points.create(self.arena.allocator());
         point.* = .{
+            .startPosition = .{ .x = x, .y = y },
             .entity = .{ .mob = mob },
             .point = .{ .x = x, .y = y },
         };
@@ -188,11 +217,15 @@ pub const World = struct {
         return point;
     }
 
-    pub fn spawnMob(self: *World, mobBase: *Mob, x: i16, y: i16) !*Object {
-        const mob = try self.mobAlloc(mobBase);
+    pub fn spawnMob(self: *World, mobBase: *Mob, x: i16, y: i16) !*Spawned {
+        const allocator = self.arena.allocator();
+        const mob = try self.mobAlloc(allocator, mobBase, true);
 
-        const point = try self.points.create(self.arena.allocator());
+        const point = try self.points.create(allocator);
+        errdefer self.points.destroy(point);
+
         point.* = .{
+            .startPosition = .{ .x = x, .y = y },
             .entity = .{ .mob = mob },
             .point = .{ .x = x, .y = y },
         };
@@ -204,7 +237,7 @@ pub const World = struct {
         return point;
     }
 
-    pub fn spawnItem(self: *World, info: CreateItem) !*Object {
+    pub fn spawnItem(self: *World, info: CreateItem) !*Spawned {
         const storedItem = try self.items.addOne(self.arena.allocator());
         storedItem.* = .{
             .itemId = 10_000 + @as(u16, @intCast(self.items.items.len)),
@@ -216,7 +249,8 @@ pub const World = struct {
         };
 
         const point = try self.points.create(self.arena.allocator());
-        point.* = Object{
+        point.* = Spawned{
+            .startPosition = .{ .x = info.position.x, .y = info.position.y },
             .entity = .{
                 .item = storedItem,
             },

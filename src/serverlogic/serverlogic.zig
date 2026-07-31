@@ -11,6 +11,8 @@ const Allocator = std.mem.Allocator;
 const Dispatcher = @import("dispatcher.zig").Dispatcher;
 const ServerBinding = @import("server_binding/server_binding.zig").ServerBinding;
 const GroundItem = core.domains.GroundItem;
+const Mob = core.Mob;
+const Spawned = core.Spawned;
 
 const logger = std.log.scoped(.serverlogic);
 pub const ServerLogic = struct {
@@ -22,21 +24,23 @@ pub const ServerLogic = struct {
     world: core.World,
     maxPlayers: usize,
     group: std.Io.Group,
+    lastUpdateTime: u64 = 0,
 
     pub fn init(
         allocator: Allocator,
         server: *network.Server,
         database: Database,
-        L: *lua.State,
-        maxPlayers: usize,
+        maxPlayers: u16,
+        maxMobs: u16,
+        maxItems: u16,
     ) !ServerLogic {
         return .{
             .arena = .init(allocator),
             .dispatcher = .init(allocator),
             .server = server,
             .database = database,
-            .state = L,
-            .world = try core.World.init(allocator, maxPlayers),
+            .state = try .init(allocator),
+            .world = try core.World.init(allocator, maxPlayers, maxMobs, maxItems),
             .maxPlayers = maxPlayers,
             .group = .init,
         };
@@ -100,26 +104,32 @@ pub const ServerLogic = struct {
         };
 
         switch (obj.entity) {
-            .npc => |npc| {
-                execNPCInteract(self, npc, peer);
+            .mob => |mob| {
+                execMobInteract(self, obj, mob, peer);
             },
             else => logger.warn("mobId {d} is not an NPC", .{mobId}),
         }
     }
 
-    fn execNPCInteract(self: *ServerLogic, npc: *core.NPC, peer: *network.Peer) void {
+    fn execMobInteract(self: *ServerLogic, spawned: *Spawned, mob: *Mob, peer: *network.Peer) void {
         const L = self.state;
-        L.restoreRegistry(npc.regOnInteract);
-        if (!L.isFunction(-1)) {
-            logger.warn("NPC({s}): interacter is not a function", .{npc.name});
-            L.pop(1);
+        if (spawned.onInteract) |onInteract| {
+            L.restoreRegistry(onInteract);
+            if (!L.isFunction(-1)) {
+                logger.warn("NPC({s}): interacter is not a function", .{mob.name});
+                L.pop(1);
+                return;
+            }
+
+            bindings.SpawnedBinding.newUserdata(L, spawned);
+            bindings.PeerBinding.newUserdata(L, peer);
+            if (!L.pcall(2, 0)) {
+                logger.err("Mob({s})[{d}]: on_interact failed => {s}", .{ mob.name, mob.mobId, L.toString(-1) });
+                L.pop(1);
+            }
+        } else {
+            logger.warn("NPC({s}): interacter is not set", .{mob.name});
             return;
-        }
-        bindings.NPCBinding.newUserdata(L, npc);
-        bindings.PeerBinding.newUserdata(L, peer);
-        if (!L.pcall(2, 0)) {
-            logger.err("NPC({s}): on_interact failed => {s}", .{ npc.name, L.toString(-1) });
-            L.pop(1);
         }
     }
 
@@ -128,6 +138,7 @@ pub const ServerLogic = struct {
         try loader.loadScripts(self.arena.allocator(), io, self.state);
 
         try self.server.listen(io);
+        self.lastUpdateTime = self.server.getServerTime();
         try self.group.concurrent(io, ServerLogic.loopServer, .{ self, io });
     }
 
@@ -141,41 +152,53 @@ pub const ServerLogic = struct {
     }
 
     fn loopServer(self: *ServerLogic, io: std.Io) void {
+        const tickRate: i64 = 1000 / 12;
         while (self.server.state == .running) {
+            const serverTime = self.server.getServerTime();
+            const deltaTime = serverTime - self.lastUpdateTime;
             // 24 per second
-            io.sleep(.fromMilliseconds(1000), .real) catch {
+
+            io.sleep(.fromMilliseconds(tickRate), .real) catch {
                 logger.warn("canceled wait", .{});
                 return;
             };
-            const serverTime = self.server.getServerTime();
 
-            self.execNPCUpdate(serverTime);
+            self.execMobUpdate(deltaTime);
+            self.lastUpdateTime = serverTime;
         }
     }
 
-    fn execNPCUpdate(self: *ServerLogic, serverTime: u64) void {
+    fn execMobUpdate(self: *ServerLogic, deltaTime: u64) void {
         const L = self.state;
         std.debug.assert(L.getTop() == 0);
-        for (self.world.npcs.items) |*npc| {
-            L.restoreRegistry(npc.regOnUpdate);
-            if (!L.isFunction(-1)) {
-                L.pop(1);
-                logger.warn("NPC({s}): on_update is not a function", .{npc.name});
+        var iter = self.world.indexes.valueIterator();
+        while (iter.next()) |ptr| {
+            const npc = ptr.*;
+            if (npc.entity != .mob) continue;
+            const mob = npc.entity.mob;
+
+            const count = npc.countTick -| deltaTime;
+            if (count > 0) {
+                npc.countTick = count;
                 continue;
             }
 
-            bindings.NPCBinding.newUserdata(L, npc);
-            L.pushInteger(@intCast(serverTime));
-            if (!L.pcall(2, 1)) {
-                logger.err("NPC({s}).on_update: failed {s}", .{ npc.name, L.toString(-1) });
-                L.pop(1);
-                continue;
-            }
+            npc.countTick += npc.tick;
+            if (npc.onUpdate) |update| {
+                L.restoreRegistry(update);
+                if (!L.isFunction(-1)) {
+                    L.pop(1);
+                    logger.warn("NPC({s}): on_update is not a function", .{mob.name});
+                    continue;
+                }
 
-            if (L.isNil(-1) or (L.isBoolean(-1) and L.toBoolean(-1))) {
-                npc.updatedAt = serverTime;
+                bindings.SpawnedBinding.newUserdata(L, npc);
+                if (!L.pcall(1, 0)) {
+                    logger.err("NPC({s}).on_update: failed {s}", .{ mob.name, L.toString(-1) });
+                    L.pop(1);
+                    continue;
+                }
             }
-            L.pop(1);
         }
     }
 
@@ -189,6 +212,7 @@ pub const ServerLogic = struct {
         bindings.WorldBinding.bind(self.state);
         bindings.RTreeBinding.bind(self.state, self.arena.allocator());
         bindings.NPCBinding.bind(self.state);
+        bindings.SpawnedBinding.bind(self.state);
         ServerBinding.bind(self);
     }
 };

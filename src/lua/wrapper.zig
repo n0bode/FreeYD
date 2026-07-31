@@ -1,7 +1,7 @@
 const std = @import("std");
 const c = @import("lua.zig").c;
 
-pub const FNFunction = *const fn (state: *State) i32;
+pub const Function = *const fn (state: *State) i32;
 
 const Allocator = std.mem.Allocator;
 const LuaState = ?*c.lua_State;
@@ -68,9 +68,9 @@ fn lua_upvalueindex(index: c_int) c_int {
 fn wrapCFunc(L: LuaState) callconv(.c) c_int {
     var state = State.wrap(L);
     // the function pointer must be an upvalue
-    const pFunc = state.toUserdata(FNFunction, state.upValueIndex(1));
+    const pFunc = state.toUserdata(Function, state.upValueIndex(1));
     if (pFunc) |ptr| {
-        const func: FNFunction = @ptrCast(@alignCast(ptr));
+        const func: Function = @ptrCast(@alignCast(ptr));
         return @intCast(func(&state));
     }
     return 0;
@@ -94,7 +94,7 @@ fn luaPanicCallback(L: LuaState) callconv(.c) c_int {
 
 pub const RegValue = union(enum) {
     func: struct {
-        func: FNFunction,
+        func: Function,
         userdata: ?*anyopaque = null,
     },
     int: i64,
@@ -366,7 +366,7 @@ pub const State = struct {
         c.lua_pushnil(self.L);
     }
 
-    pub fn pushFunction(self: State, FN: FNFunction) void {
+    pub fn pushFunction(self: State, FN: Function) void {
         self.pushLightUserdata(@ptrCast(@constCast(FN)));
         c.lua_pushcclosure(self.L, wrapCFunc, 1);
     }
@@ -375,7 +375,7 @@ pub const State = struct {
         c.lua_pushcclosure(self.L, wrapCFunc, @intCast(upValues));
     }
 
-    pub fn register(self: State, methodName: []const u8, func: FNFunction) void {
+    pub fn register(self: State, methodName: []const u8, func: Function) void {
         c.lua_pushlightuserdata(self.L, @ptrCast(@constCast(func)));
         self.pushClosure(1);
         self.setGlobal(methodName);

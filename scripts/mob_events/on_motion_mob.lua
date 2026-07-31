@@ -80,6 +80,10 @@ server:on("on_motion_mob", function(peer, req)
                 mob = player_mob,
             })
         end
+
+        if object.location == 0 then
+            return
+        end
         peer:send_command("spawn_mob", {
             position = { x = object.position.x, y = object.position.y },
             owner_id = mob.mob_id,

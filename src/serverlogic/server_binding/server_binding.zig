@@ -263,6 +263,10 @@ fn lua_create_npc(L: *State) i32 {
     const onInteractRegId = L.saveRegistry(-1);
     L.pop(1);
 
+    L.getField(2, "tick");
+    const tick = L.toIntegerOr(u32, -1, 1000);
+    L.pop(1);
+
     var equipments = [_]Item{.{}} ** 16;
     L.getField(2, "equipments");
     if (!L.isNil(-1)) {
@@ -283,6 +287,7 @@ fn lua_create_npc(L: *State) i32 {
         .position = position,
         .equipments = equipments,
         .onUpdate = onUpdateRegId,
+        .tick = tick,
         .onInteract = onInteractRegId,
     }) catch {
         return L.panic("failed to create NPC: ");

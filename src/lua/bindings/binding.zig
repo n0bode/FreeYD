@@ -20,7 +20,9 @@ pub const WorldBinding = @import("world_binding.zig").WorldBinding;
 pub const RTreeBinding = @import("libs/rtree_binding.zig").RTreeBinding;
 pub const ItemBinding = @import("item_binding.zig").ItemBinding;
 pub const NPCBinding = @import("npc_binding.zig").NPCBinding;
+
 pub const GroundItemBinding = @import("world_binding.zig").GroundItemBinding;
+pub const SpawnedBinding = @import("spawned_binding.zig").SpawnedBinding;
 
 const testing = @import("std").testing;
 test {

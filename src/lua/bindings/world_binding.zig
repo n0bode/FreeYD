@@ -4,7 +4,7 @@ const std = @import("std");
 
 const World = core.World;
 const Point = core.Point;
-const Object = core.Object;
+const Spawned = core.Spawned;
 const GroundItem = core.domains.GroundItem;
 const MobBinding = bindings.MobBinding;
 
@@ -175,9 +175,8 @@ const pFnLua = struct {
 fn wrap_eachWorld(ptr: *anyopaque, point: *Point) void {
     const self: *pFnLua = @ptrCast(@alignCast(ptr));
 
-    const obj: *Object = @fieldParentPtr("point", point);
+    const obj: *Spawned = @fieldParentPtr("point", point);
     switch (obj.entity) {
-        .npc => |npc| call_eachMob(self.L, self.fnIndex, point, npc.mob),
         .mob => |mob| call_eachMob(self.L, self.fnIndex, point, mob),
         .item => |item| call_eachItem(self.L, self.fnIndex, point, item),
     }

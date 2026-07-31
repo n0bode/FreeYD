@@ -8,7 +8,17 @@ pub const PositionBinding = @This();
 pub const metatableName = mapper.metatableName;
 
 pub fn bind(L: *bindings.lua.State) void {
+    _ = L.newMetatable(metatableName ++ "_CPY");
+    L.pushFunction(lua__index);
+    L.setField(-2, "__index");
+
     mapper.bind(L);
+}
+
+pub fn newUserdataCopy(L: *bindings.lua.State, pos: *Position) void {
+    const ptr = L.newUserdata(Position);
+    ptr.* = pos.*;
+    L.setMetableByName(metatableName ++ "_CPY");
 }
 
 pub fn toUserdataPtr(L: *bindings.lua.State, idx: i32) ?*Position {
@@ -34,4 +44,22 @@ pub fn toUserdata(L: *bindings.lua.State, idx: i32) ?Position {
     return (toUserdataPtr(L, idx) orelse {
         return null;
     }).*;
+}
+
+fn lua__index(L: *bindings.lua.State) i32 {
+    const self = L.toUserdata(Position, 1) orelse {
+        L.pushNil();
+        return 1;
+    };
+
+    const key = L.toString(2);
+    if (key[0] == 'x') {
+        L.pushInteger(self.x);
+        return 1;
+    } else if (key[0] == 'y') {
+        L.pushInteger(self.y);
+        return 1;
+    }
+    L.pushNil();
+    return 1;
 }

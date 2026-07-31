@@ -53,16 +53,6 @@ function Server:get_peer(peer_id) end
 ---@field width integer width of area from x to x + width
 ---@field height integer height of area from y to y + height
 
----Multicast in area an event to all connected peers.
----@param event string Event name
----@param data table Event data to send
----@param area QueryArea parameters to send multicast command
----@param opts MulticastOptions? overload options
----@overload fun(self: Server, event: "mob_spawn", area: QueryArea, data: MobSpawnCommand, opts: MulticastOptions?)
----@overload fun(self: Server, event: "mob_move", area: QueryArea, data: MobMoveCommand, opts: MulticastOptions?)
----@return string error message if the multicast fails
-function Server:multicast_command_in_area(event, area, data, opts) end
-
 ---Creates a new NPC in the world.
 ---@param npc_info NPCCreateInfo
 function Server:create_npc(npc_info) end

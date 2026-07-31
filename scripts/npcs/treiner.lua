@@ -5,10 +5,12 @@ local queries = require("scripts.utils.queries")
 server:create_npc {
     name = "Treinador",
     position = { x = 2126, y = 2037 },
-    on_interact = function(npc, peer)
-        logger:info("Player " .. peer.peer_id .. " interacted with NPC " .. npc.name)
-        peer:send_text("Hello, I am the " .. npc.name .. ". I can help you train your skills.")
+    on_interact = function(ctx, peer)
+        logger:info("Player " .. peer.peer_id .. " interacted with NPC " .. ctx.mob.name)
+        peer:send_text("Hello, I am the " .. ctx.mob.name .. ". I can help you train your skills.")
     end,
+    -- 2 seconds
+    tick = 2000,
     equipments = {
         [EquipmentSlot.face] = Item.new(60),    -- Example item ID for face equipment
         [EquipmentSlot.head] = Item.new(130),   -- Example item ID for body equipment
@@ -19,27 +21,22 @@ server:create_npc {
         [EquipmentSlot.weapon] = Item.new(986), -- Example item ID for weapon equipment
         [EquipmentSlot.cape] = Item.new(543),   -- Example item ID for weapon equipment
     },
-    on_update = function(npc, server_time)
-        local delta = server_time - npc.updated_at
-        if delta < 10000 then
-            return false
-        end
+    on_update = function(ctx)
+        local mob = ctx.mob
+        local position = ctx.start_position
 
         local world = server:get_world()
-        local start = npc.current_position
-        local dest = { x = npc.start_position.x + math.random(-2, 2), y = npc.start_position.y + math.random(-2, 2) }
+        local start = position
+        local dest = { x = ctx.start_position.x + math.random(-2, 2), y = ctx.start_position.y + math.random(-2, 2) }
 
-        world:move(npc.id, dest.x, dest.y)
-        npc.current_position.x = dest.x
-        npc.current_position.y = dest.y
-
+        world:move(mob.mob_id, dest.x, dest.y)
         queries.players_in_area(dest, function(player, position)
             local another = player.peer
             another:send_command("motion_mob", {
                 origin = { x = start.x, y = start.y },
                 kind = 0,
-                speed = 2,
-                mob_id = npc.id,
+                speed = 1,
+                mob_id = mob.mob_id,
                 destination = { x = dest.x, y = dest.y },
             })
         end)

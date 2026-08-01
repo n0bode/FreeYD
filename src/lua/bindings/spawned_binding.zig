@@ -74,7 +74,6 @@ fn lua__mob(L: *lua.State) i32 {
         return 1;
     };
 
-    std.log.info("mob_id = {d}", .{self.tick});
     if (self.entity == .mob) {
         bindings.MobBinding.newUserdata(L, self.entity.mob);
         return 1;

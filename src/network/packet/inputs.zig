@@ -2,6 +2,7 @@ const std = @import("std");
 const Header = @import("packet.zig").Header;
 const Opcode = @import("packet.zig").Opcode;
 const crypto = @import("crypto.zig");
+const logger = std.log.scoped(.packet);
 
 pub const PacketData = union(OpcodeFromClient) {
     unknown,
@@ -11,7 +12,7 @@ pub const PacketData = union(OpcodeFromClient) {
     createChar: PacketCharCreateInput,
     deleteChar: PacketCharDeleteInput,
     spawnChar: PacketEnterWorldInput,
-    motionMob: PacketActionInput,
+    motionMob: PacketMotionInput,
     moveItem: PacketMoveItemInput,
     updateAttribute: PacketUpdateAttribute,
     chatWhisper: PacketChatWhisperInput,
@@ -20,6 +21,9 @@ pub const PacketData = union(OpcodeFromClient) {
     interactionMob: PacketMobInteractInput,
     dropItem: PacketDropItemInput,
     interactGroundItem: PacketGroundItemInteractInput,
+    //attack: PacketAttackInput,
+    attackOne: PacketAttackOneInput,
+    attackTwo: PacketAttackTwoInput,
 };
 
 // This a Packet abstract union received from Client
@@ -41,9 +45,15 @@ pub const PacketInput = struct {
                         .data = @unionInit(PacketData, field.name, {}),
                     };
                 }
+
+                var packet = std.mem.zeroes(field.type);
+                parsePacket(field.type, &packet, bMessage) catch |err| {
+                    logger.err("parsePacket {X}: {s}", .{ header.operationCode, @errorName(err) });
+                    return err;
+                };
                 return .{
                     .header = header,
-                    .data = @unionInit(PacketData, field.name, parsePacket(field.type, bMessage)),
+                    .data = @unionInit(PacketData, field.name, packet),
                 };
             }
         }
@@ -55,10 +65,24 @@ pub const PacketInput = struct {
     }
 };
 
-fn parsePacket(comptime T: anytype, bMessage: []u8) T {
+fn parsePacket(comptime T: anytype, ptr: *T, bMessage: []u8) !void {
     const start = @sizeOf(Header);
-    const end = start + @sizeOf(T);
-    return @bitCast(bMessage[start..end].*);
+    const header: Header = @bitCast(bMessage[0..start].*);
+    //const expectSize = start + @sizeOf(T);
+
+    //if (expectSize > header.verifier.size) {
+    //    logger.err("packet size mismatch, expected {d}, got {d}", .{ expectSize - start, header.verifier.size - start });
+    //    return error.PacketTooShort;
+    //}
+
+    const end = @min(start + @sizeOf(T), header.verifier.size);
+    const len = end - start;
+
+    logger.info("len = {d}; end = {d}", .{ len, end });
+    // just hea
+    if (start > end) return;
+    const buffer = std.mem.asBytes(ptr);
+    @memcpy(buffer[0..len], bMessage[start..(start + len)]);
 }
 
 pub const OpcodeFromClient = enum(u16) {
@@ -78,6 +102,10 @@ pub const OpcodeFromClient = enum(u16) {
     interactionMob = @intFromEnum(Opcode.MOB_INTERACT),
     dropItem = @intFromEnum(Opcode.DROP_ITEM),
     interactGroundItem = @intFromEnum(Opcode.INTERACT_GROUND_ITEM),
+    //attack = @intFromEnum(Opcode.ON_ATTACK),
+    attackOne = @intFromEnum(Opcode.ON_ATTACK_ONE),
+    attackTwo = @intFromEnum(Opcode.ON_ATTACK_TWO),
+
     // parse a u16 code to a struct union with correct data
     pub fn parse(code: u16) OpcodeFromClient {
         inline for (std.enums.values(OpcodeFromClient)) |value| {
@@ -124,12 +152,12 @@ pub const PositionData = extern struct {
     y: i16,
 };
 
-pub const PacketActionInput = extern struct {
+pub const PacketMotionInput = extern struct {
     origin: PositionData,
     speed: i32,
     kind: i32,
     destination: PositionData,
-    routes: [1]u8,
+    routes: [22]u8,
 };
 
 pub const PacketLoginInput = extern struct {
@@ -139,6 +167,8 @@ pub const PacketLoginInput = extern struct {
     none: i32,
     keys: [16]u8,
     ipAddress: [16]u8,
+    // need complete 92 bytes
+    unks: [36]u8,
 };
 
 pub const PacketTeleportInput = extern struct {
@@ -189,6 +219,35 @@ pub const PacketGroundItemInteractInput = extern struct {
     itemId: u32,
     state: u32,
 };
+
+pub const AttackDamage = extern struct {
+    targetId: u16,
+    damage: i16,
+};
+
+pub const PacketAttackInput = buildAttack(13);
+pub const PacketAttackOneInput = buildAttack(1);
+pub const PacketAttackTwoInput = buildAttack(2);
+
+fn buildAttack(comptime size: usize) type {
+    return extern struct {
+        attackerId: u16,
+        currentHp: u16,
+        attackerPosition: PositionData,
+        targetPosition: PositionData,
+        skillIndex: i16,
+        currentMp: i16,
+        motion: u8,
+        skillParm: u8,
+        flagLocal: u8,
+        doubleCritical: u8,
+        hold: i32,
+        currentExp: i32,
+        requiredMp: i16,
+        rsv: u16,
+        dam: [size]AttackDamage,
+    };
+}
 
 const t = std.testing;
 test "PacketFromClient.decode - it should success" {

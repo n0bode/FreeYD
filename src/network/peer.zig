@@ -176,8 +176,8 @@ pub const Peer = struct {
 
             var packetDecoded = PacketInput.decode(data) catch |err| {
                 logger.err("[{d}] failed to accept message: {s}", .{ peerId, @errorName(err) });
-                self.sendTextMessage("client is invalid") catch {};
-                self.changeState(.Disconnected);
+                //self.sendTextMessage("client is invalid") catch {};
+                //self.changeState(.Disconnected);
                 continue;
             };
 

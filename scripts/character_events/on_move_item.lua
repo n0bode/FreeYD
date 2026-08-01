@@ -59,9 +59,9 @@ server:on("on_move_item", function(peer, req)
 
         local player_mob = peer:get_player_mob()
         local position = { x = player_pos.x, y = player_pos.y }
-        queries.in_area(position, only_players,
-            function(object)
-                local another_peer = object.result.peer
+        queries.players_in_area(position,
+            function(player)
+                local another_peer = player.peer
                 another_peer:send_command("update_equipments", {
                     mob = player_mob,
                 })

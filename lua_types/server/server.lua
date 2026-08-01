@@ -57,6 +57,10 @@ function Server:get_peer(peer_id) end
 ---@param npc_info NPCCreateInfo
 function Server:create_npc(npc_info) end
 
+---Creates a new enemy in the world.
+---@param enemy_info EnemyCreateInfo
+function Server:create_enemy(enemy_info) end
+
 ---@class SpawnItemInfo
 ---@field item Item
 ---@field position Position

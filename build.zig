@@ -68,6 +68,31 @@ pub fn build(b: *std.Build) void {
         },
     });
 
+    const c_sqlite_source =
+        \\#include<sqlite3.h>
+        \\
+    ;
+
+    const c_sqlite_step = b.addWriteFiles();
+    const c_sqlite_path = c_sqlite_step.add("c.c", c_sqlite_source);
+    const c_sqlite_translate = b.addTranslateC(.{
+        .optimize = optimize,
+        .root_source_file = c_sqlite_path,
+        .link_libc = true,
+        .target = target,
+    });
+    c_sqlite_translate.linkSystemLibrary("sqlite3", .{ .needed = true });
+    c_sqlite_translate.link_libc = true;
+
+    const sqliteDB = b.addModule("sqlitedb", .{
+        .root_source_file = b.path("src/db/databases/sqlitedb/sqlitedb.zig"),
+        .target = target,
+        .imports = &.{
+            .{ .name = "database", .module = database },
+            .{ .name = "c", .module = c_sqlite_translate.createModule() },
+        },
+    });
+
     const c_lua_source =
         \\#include<luajit-2.1/lua.h>
         \\#include<luajit-2.1/lualib.h>
@@ -85,9 +110,7 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
         .target = target,
     });
-
     c_lua_translate.linkSystemLibrary("luajit", .{ .needed = true });
-    const c_lua_module = c_lua_translate.createModule();
 
     const luamodule = b.addModule("lua", .{
         .target = target,
@@ -95,7 +118,7 @@ pub fn build(b: *std.Build) void {
         //.link_libc = true,
         .root_source_file = b.path("src/lua/lua.zig"),
         .imports = &.{
-            .{ .name = "c", .module = c_lua_module },
+            .{ .name = "c", .module = c_lua_translate.createModule() },
         },
     });
 
@@ -158,6 +181,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "core", .module = coreMod },
                 .{ .name = "db", .module = database },
                 .{ .name = "filedb", .module = fileDB },
+                .{ .name = "sqlitedb", .module = sqliteDB },
                 .{ .name = "lua", .module = luamodule },
                 .{ .name = "serverlogic", .module = serverlogic },
                 .{ .name = "network", .module = network },

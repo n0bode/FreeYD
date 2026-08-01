@@ -118,7 +118,11 @@ pub const Character = extern struct {
         self.skillBar1 = [_]i8{-1} ** 16;
 
         // in 7.54 FaceID, 1 = TK, 11 = FM, BM = 21, HT = 31
-        self.equipments[0].itemID = 1 + @as(u16, @intCast(@intFromEnum(class))) * 10;
+        if (self.soul == .MORTAL) {
+            self.equipments[0].itemID = 1 + @as(u16, @intCast(@intFromEnum(class))) * 10;
+        } else {
+            self.equipments[0].itemID = 41 + @intFromEnum(class);
+        }
         return self;
     }
 

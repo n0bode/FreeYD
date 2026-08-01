@@ -363,7 +363,7 @@ pub const CharacterData = extern struct {
             .exp = c.exp,
             .position = .{ .x = c.position.x, .y = c.position.y },
             .stats = StatsData.from(c.stats),
-            .currentStats = StatsData.from(c.stats),
+            .currentStats = StatsData.from(c.currentStats),
             .regenHp = c.regenHp,
             .regenMp = c.regenMp,
             .skills = c.skillPoints,

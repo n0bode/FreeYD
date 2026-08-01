@@ -163,11 +163,47 @@ local function players_in_areas(src, dest, func)
     end)
 end
 
+---@return {peer: Peer, position: Position}?
+local function player_closest_to(src, min_distance)
+    local closest_player = nil
+    local closest_distance = -1
+
+    local map = server:get_world()
+    local rect = {
+        x = src.x - min_distance,
+        y = src.y - min_distance,
+        width = min_distance * 2,
+        height = min_distance * 2,
+    }
+
+    map:each_world_in_area(rect, function(entity, position, type)
+        if type == 2 then
+            return
+        end
+
+        if not is_player(entity.mob_id) then
+            return
+        end
+
+        local distance = math.min(math.abs(position.x - src.x), math.abs(position.y - src.y))
+        logger:info("player " .. entity.mob_id .. " distance = " .. distance)
+        if (not closest_player) or distance < closest_distance then
+            closest_distance = distance
+            closest_player = {
+                peer = server:get_peer(entity.mob_id),
+                position = position,
+            }
+        end
+    end)
+    return closest_player
+end
+
 return {
     in_areas = query_areas,
     in_area = query_area,
     players_in_area = players_in_area,
     players_in_areas = players_in_areas,
+    player_closest_to = player_closest_to,
     teleport = query_teleport,
     QueryResultType = QueryResultType,
     QueryResult = QueryResult,

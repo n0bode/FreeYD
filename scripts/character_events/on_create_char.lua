@@ -36,20 +36,20 @@ server:on("on_create_char", function(peer, req)
             Item.new(2360, { index = 0, value = 110 }, { index = 0, value = 110 }, { index = 0, value = 110 }))
 
         -- TODO: ler de uma tabela ou algo do tipo
+        char.stats.attack = 400
         char.stats.level = 116
         char.current_stats.level = 116
         char.skill_points = 255
-        char.stats.state.merchant = 2;
-        char.stats.skills.skill0 = 10;
+        char.stats.state.merchant = 2
+        char.stats.skills.skill0 = 10
         char.stats.skills.skill1 = 91
         char.stats.skills.skill2 = 92
         char.stats.skills.skill3 = 93
         char.stats.state.movement_speed = 7
-        char.current_stats.state.movement_speed = 7
-        char.stats.str = 100
-        char.stats.int = 100
-        char.stats.state.pk_level = 10;
-        char.current_stats.state.pk_level = 10;
+        char.stats.str = 255
+        char.stats.int = 255
+        char.stats.dex = 255
+        char.stats.con = 255
     end)
 
     if err ~= nil then

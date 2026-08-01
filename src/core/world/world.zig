@@ -27,6 +27,18 @@ pub const CreateNPC = struct {
     equipments: [16]Item,
 };
 
+pub const CreateEnemy = struct {
+    name: []const u8,
+    position: Position,
+    tick: u32,
+    delay: u32,
+    onUpdate: i32,
+    onDeath: ?i32,
+    onInteract: ?i32,
+    stats: domains.Stats,
+    equipments: [16]Item,
+};
+
 pub const CreateItem = struct {
     item: Item,
     position: Position,
@@ -173,6 +185,48 @@ pub const World = struct {
         };
 
         // must be 1 to interact with npc
+
+        const len = @min(info.name.len, mob.name.len);
+        @memset(mob.name[0..], 0);
+        @memcpy(mob.name[0..len], info.name[0..len]);
+
+        try self.indexes.put(mob.mobId, spawned);
+        if (!try self.tree.insert(&spawned.point)) {
+            return error.MobOutOfMap;
+        }
+        return spawned;
+    }
+
+    pub fn createEnemy(self: *World, info: CreateEnemy) !*Spawned {
+        var mobBase = Mob{
+            .stats = info.stats,
+        };
+        for (info.equipments, 0..) |item, i| {
+            if (i == 14) {
+                mobBase.equipments[i] = .fromMount(item);
+            } else {
+                mobBase.equipments[i] = .from(item);
+            }
+        }
+
+        const allocator = self.arena.allocator();
+        const mob = try self.mobAlloc(allocator, &mobBase, true);
+        errdefer self.mobs.destroy(@alignCast(mob));
+
+        const spawned = try self.points.create(allocator);
+        errdefer self.points.destroy(spawned);
+
+        const position = info.position;
+        spawned.* = .{
+            .startPosition = .{ .x = position.x, .y = position.y },
+            .onUpdate = info.onUpdate,
+            .onDeath = info.onDeath,
+            .onInteract = info.onInteract,
+            .countTick = info.delay,
+            .tick = info.tick,
+            .entity = .{ .mob = mob },
+            .point = .{ .x = position.x, .y = position.y },
+        };
 
         const len = @min(info.name.len, mob.name.len);
         @memset(mob.name[0..], 0);

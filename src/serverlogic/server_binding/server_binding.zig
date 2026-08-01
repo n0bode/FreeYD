@@ -100,6 +100,15 @@ pub fn bind(logic: *ServerLogic) void {
             },
         },
         .{
+            .name = "create_enemy",
+            .value = .{
+                .func = .{
+                    .func = lua_create_enemy,
+                    .userdata = logic,
+                },
+            },
+        },
+        .{
             .name = "spawn_player",
             .value = .{
                 .func = .{
@@ -291,6 +300,127 @@ fn lua_create_npc(L: *State) i32 {
         .onInteract = onInteractRegId,
     }) catch {
         return L.panic("failed to create NPC: ");
+    };
+    L.pushNil();
+    return 1;
+}
+
+fn lua_create_enemy(L: *State) i32 {
+    const self: *ServerLogic = L.toUserdata(ServerLogic, L.upValueIndex(2)) orelse {
+        L.pushNil();
+        return 1;
+    };
+
+    L.checkType(2, .Table);
+
+    L.getField(2, "name");
+    const name = L.checkString(-1);
+    L.pop(1);
+
+    L.getField(2, "position");
+    const position = bindings.PositionBinding.toUserdata(L, L.getTop()) orelse {
+        L.pushNil();
+        return 1;
+    };
+    L.pop(1);
+
+    L.getField(2, "on_update");
+    L.checkType(-1, .Function);
+    const onUpdateRegId = L.saveRegistry(-1);
+    L.pop(1);
+
+    L.getField(2, "on_death");
+    const onDeathRegId: ?i32 = if (L.isType(-1, .Function)) L.saveRegistry(-1) else null;
+    L.pop(1);
+
+    L.getField(2, "on_interact");
+    const onInteractRegId: ?i32 = if (L.isType(-1, .Function)) L.saveRegistry(-1) else null;
+    L.pop(1);
+
+    L.getField(2, "tick");
+    const tick = L.toIntegerOr(u32, -1, 1000);
+    L.pop(1);
+
+    L.getField(2, "delay");
+    const delay = L.toIntegerOr(u32, -1, 0);
+    L.pop(1);
+
+    var equipments = [_]Item{.{}} ** 16;
+    L.getField(2, "equipments");
+    if (!L.isNil(-1)) {
+        L.pushNil();
+        while (L.next(-2)) {
+            const index = L.checkInteger(usize, -2);
+            const item = ItemBinding.toUserdata(L, -1) orelse {
+                return L.panic("equipment must be item");
+            };
+            equipments[index] = item.*;
+            L.pop(1);
+        }
+        L.pop(1);
+    } else {
+        L.pop(1);
+    }
+
+    var stats = core.domains.Stats{};
+    L.getField(2, "stats");
+    if (!L.isNil(-1)) {
+        L.getField(-1, "level");
+        stats.level = L.toIntegerOr(u16, -1, 1);
+        L.pop(1);
+
+        L.getField(-1, "max_hp");
+        stats.maxHp = L.toIntegerOr(u16, -1, 100);
+        stats.hp = stats.maxHp;
+        L.pop(1);
+
+        L.getField(-1, "max_mp");
+        stats.maxMp = L.toIntegerOr(u16, -1, 100);
+        stats.mp = stats.maxMp;
+        L.pop(1);
+
+        L.getField(-1, "attack");
+        stats.attack = L.toIntegerOr(i16, -1, 50);
+        L.pop(1);
+
+        L.getField(-1, "defense");
+        stats.defense = L.toIntegerOr(i16, -1, 10);
+        L.pop(1);
+
+        L.getField(-1, "str");
+        stats.str = L.toIntegerOr(i16, -1, 0);
+        L.pop(1);
+
+        L.getField(-1, "speed");
+        stats.state.movementSpeed = L.toIntegerOr(u4, -1, 1);
+        L.pop(1);
+
+        L.getField(-1, "int");
+        stats.int = L.toIntegerOr(i16, -1, 0);
+        L.pop(1);
+
+        L.getField(-1, "dex");
+        stats.dex = L.toIntegerOr(i16, -1, 0);
+        L.pop(1);
+
+        L.getField(-1, "con");
+        stats.con = L.toIntegerOr(i16, -1, 0);
+        L.pop(1);
+    }
+    L.pop(1);
+
+    _ = self.world.createEnemy(.{
+        .name = name,
+        .position = position,
+        .onUpdate = onUpdateRegId,
+        .onDeath = onDeathRegId,
+        .onInteract = onInteractRegId,
+        .tick = tick,
+        .stats = stats,
+        .delay = delay,
+        .equipments = equipments,
+    }) catch {
+        return L.panic("failed to create enemy");
     };
     L.pushNil();
     return 1;

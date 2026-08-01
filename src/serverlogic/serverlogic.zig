@@ -63,6 +63,12 @@ pub const ServerLogic = struct {
                 .interactGroundItem => |req| {
                     self.callInteractGroundItem(peer, @intCast(req.itemId));
                 },
+                .attackOne => |req| {
+                    logger.info("peer {d} attack one {any}", .{ peer.peerId, req });
+                },
+                .login => |req| {
+                    logger.info("peer {d} login {any}", .{ peer.peerId, req });
+                },
                 else => {},
             }
         }

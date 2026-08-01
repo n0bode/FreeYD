@@ -37,6 +37,9 @@ pub const Opcode = enum(u16) {
     CREATE_GROUND_ITEM = 0x26E,
     DELETE_GROUND_ITEM = 0x16F,
     INTERACT_GROUND_ITEM = 0x374,
+    //ON_ATTACK = 0x367,
+    ON_ATTACK_ONE = 0x39D,
+    ON_ATTACK_TWO = 0x39E,
 };
 
 // important to encrypt and decrypt message from client and to client

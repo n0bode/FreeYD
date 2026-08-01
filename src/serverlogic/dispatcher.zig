@@ -28,6 +28,9 @@ const nameEventsMap = std.EnumArray(Opcodes, ?[]const u8).init(.{
     .interactionMob = "on_interact_mob",
     .dropItem = "on_drop_item",
     .interactGroundItem = "on_interact_ground_item",
+    .attackOne = "on_attack_one",
+    .attackTwo = "on_attack_two",
+    //.attack = "on_attack",
 });
 
 pub const Dispatcher = struct {
@@ -98,6 +101,7 @@ pub const Dispatcher = struct {
         }
         if (!L.pcall(count, 1)) {
             logger.err("failed to call event {s}: {s}", .{ eventName, L.toString(-1) });
+            L.pop(1);
         }
         defer L.pop(1);
 

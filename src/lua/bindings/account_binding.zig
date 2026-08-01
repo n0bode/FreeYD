@@ -144,6 +144,8 @@ fn lua__create_character(L: *lua.State) i32 {
             return L.throw("builder returns failed");
         }
     }
+    char.currentStats = char.stats;
+
     L.pushNil();
     return 2;
 }

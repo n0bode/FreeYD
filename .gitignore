@@ -3,3 +3,4 @@
 zig-out/
 http
 dbs/*
+db/*

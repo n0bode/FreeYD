@@ -5,6 +5,7 @@ const domain = @import("core").domains;
 pub const Account = domain.Account;
 pub const Item = domain.Item;
 pub const Character = domain.Character;
+pub const Stats = domain.Stats;
 
 //errors
 pub const LoginError = error{UsernameNotFound};
@@ -21,6 +22,7 @@ pub const VTable = struct {
     signup: *const fn (*anyopaque, io: Io, username: []const u8, password: []const u8, account: *Account) bool,
     updateAccount: *const fn (*anyopaque, io: Io, account: *Account) bool,
     getAccountByUsername: *const fn (*anyopaque, io: Io, username: []const u8, account: *Account) bool,
+    saveCharacter: *const fn (*anyopaque, io: Io, account: *Account, character: *Character) bool,
 };
 
 // wrapper function
@@ -61,6 +63,15 @@ pub fn getAccountByUsername(
     return self.vtable.getAccountByUsername(self.ptr, io, username, account);
 }
 
+pub fn saveCharacter(
+    self: Database,
+    io: Io,
+    account: *Account,
+    character: *Character,
+) bool {
+    return self.vtable.saveCharacter(self.ptr, io, account, character);
+}
+
 pub fn from(impl: anytype) Database {
     const T = @TypeOf(impl);
     const gen = struct {
@@ -80,7 +91,12 @@ pub fn from(impl: anytype) Database {
             const self = @as(T, @ptrCast(@alignCast(ptr)));
             return self.getAccountByUsername(io, username, account);
         }
+        fn saveCharacter(ptr: *anyopaque, io: Io, account: *Account, character: *Character) bool {
+            const self = @as(T, @ptrCast(@alignCast(ptr)));
+            return self.saveCharacter(io, account, character);
+        }
     };
+
     return .{
         .ptr = impl,
         .vtable = &VTable{
@@ -88,6 +104,7 @@ pub fn from(impl: anytype) Database {
             .signup = gen.signup,
             .updateAccount = gen.updateAccount,
             .getAccountByUsername = gen.getAccountByUsername,
+            .saveCharacter = gen.saveCharacter,
         },
     };
 }

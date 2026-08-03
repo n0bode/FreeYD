@@ -32,19 +32,18 @@ server:on("on_login", function(peer, req)
         return true
     end
 
-    if account.state ~= AccountState.OFFLINE then
-        logger:info("account already logged: " .. req.username)
-        peer:send_text("account is already logged in")
-        account.state = AccountState.OFFLINE
+    logger:info("account_state " .. account.state)
+    if account.state == AccountState.NEW_ACCOUNT or account.state == AccountState.OFFLINE then
+        account.state = AccountState.LOGGED
         account:save(db)
-        return false
+        peer:associate(account)
+        peer:send_command("enter_account", "bem vindo ao servidor")
+        return true
     end
 
-    account.state = AccountState.LOGGED
+    logger:info("account already logged: " .. req.username)
+    peer:send_text("account is already logged in")
+    account.state = AccountState.OFFLINE
     account:save(db)
-    peer:associate(account)
-
-
-    peer:send_command("enter_account", "bem vindo ao servidor")
-    return true
+    return false
 end)

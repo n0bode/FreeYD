@@ -24,4 +24,5 @@ pub const Account = extern struct {
     cargo: [128]Item,
     state: AccountState = .NEW_ACCOUNT,
     characters: [4]Character,
+    email: [128]u8,
 };

@@ -176,7 +176,13 @@ pub const ServerLogic = struct {
 
     fn execMobUpdate(self: *ServerLogic, deltaTime: u64) void {
         const L = self.state;
-        std.debug.assert(L.getTop() == 0);
+        const diff = L.getTop();
+        if (L.getTop() != 0) {
+            logger.err("could not execute, top has: {d}", .{diff});
+            L.pop(diff);
+            return;
+        }
+
         var iter = self.world.indexes.valueIterator();
         while (iter.next()) |ptr| {
             const npc = ptr.*;

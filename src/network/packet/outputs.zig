@@ -103,7 +103,7 @@ pub const StatsData = extern struct {
     attack: i16,
 
     state: packed struct(u16) {
-        mechant: u4,
+        mobType: u4,
         direction: u4,
         speed: u4,
         pkLevel: u4,
@@ -121,12 +121,42 @@ pub const StatsData = extern struct {
 
     specials: [4]u8,
 
-    pub fn from(s: domain.Stats) StatsData {
+    pub fn fromMob(mob: *const domain.Mob) StatsData {
+        const s = &mob.stats;
         return StatsData{
-            .level = s.level,
+            .level = mob.level,
             .defense = s.defense,
             .attack = s.attack,
-            .state = @bitCast(s.state),
+            .state = .{
+                .direction = s.movement.direction,
+                .speed = s.movement.speed,
+                .mobType = @intCast(mob.kind & 0xF),
+                .pkLevel = @intCast(mob.pkLevel & 0xF),
+            },
+            .maxHp = s.maxHp,
+            .maxMp = s.maxMp,
+            .currentHp = s.hp,
+            .currentMp = s.mp,
+            .str = s.str,
+            .int = s.int,
+            .dex = s.dex,
+            .con = s.con,
+            .specials = @bitCast(s.skills),
+        };
+    }
+
+    pub fn fromChar(c: *const domain.Character, s: *const domain.Stats) StatsData {
+        return StatsData{
+            .level = c.level,
+            .defense = s.defense,
+            .attack = s.attack,
+            .state = .{
+                .direction = s.movement.direction,
+                .speed = s.movement.speed,
+                // always 1 for players
+                .mobType = 1,
+                .pkLevel = @intCast(c.pkLevel & 0xF),
+            },
             .maxHp = s.maxHp,
             .maxMp = s.maxMp,
             .currentHp = s.hp,
@@ -197,7 +227,7 @@ pub const PacketCharListData = extern struct {
             self.gold[iChar] = dbChar.gold;
             self.exp[iChar] = dbChar.exp;
 
-            self.stats[iChar] = .from(dbChar.stats);
+            self.stats[iChar] = .fromChar(&dbChar, &dbChar.stats);
             const equipments = &self.equipments[iChar];
             inline for (0..equipments.len) |iEquip| {
                 if (iEquip > (dbChar.equipments.len - 1)) {
@@ -302,7 +332,7 @@ pub const PositionData = extern struct {
 
 pub const CharacterData = extern struct {
     name: [12]u8,
-    pkLevel: u8,
+    pkLevel: i8,
     currentKill: u8,
     totalKill: u16,
     cape: u8,
@@ -327,7 +357,7 @@ pub const CharacterData = extern struct {
     saveMana: u8,
 
     skillBar0: [4]i8,
-    guildRole: u8,
+    guildLevel: u8,
     _dunno2: u8 = 0,
 
     regenHp: i8,
@@ -349,12 +379,12 @@ pub const CharacterData = extern struct {
     drainHp: i32,
     rest: [404]u8 = [_]u8{0} ** 404,
 
-    pub fn from(userId: u16, c: *domain.Character) CharacterData {
+    pub fn from(userId: u16, c: *const domain.Character) CharacterData {
         var self: CharacterData = std.mem.zeroInit(CharacterData, .{
             .name = c.name[0..12].*,
             .pkLevel = c.pkLevel,
             .totalKill = c.totalKill,
-            .currentKill = c.currentKill,
+            .currentKill = @as(u8, @intCast(c.currentKill & 0xFF)),
             .cape = c.clan,
             .info = @as(u8, @bitCast(c.citizenInfo)),
             .guildId = c.guildId,
@@ -362,20 +392,20 @@ pub const CharacterData = extern struct {
             .gold = c.gold,
             .exp = c.exp,
             .position = .{ .x = c.position.x, .y = c.position.y },
-            .stats = StatsData.from(c.stats),
-            .currentStats = StatsData.from(c.currentStats),
-            .regenHp = c.regenHp,
-            .regenMp = c.regenMp,
+            .stats = StatsData.fromChar(c, &c.stats),
+            .currentStats = StatsData.fromChar(c, &c.currentStats),
+            .regenHp = c.currentStats.regenHp,
+            .regenMp = c.currentStats.regenMp,
             .skills = c.skillPoints,
-            .criticRate = c.criticRate,
+            .criticRate = c.currentStats.criticalRate,
             .saveMana = c.saveMana,
-            .skillBar0 = c.skillBar0,
-            .guildRole = c.guildRole,
-            .resists = @as([4]u8, @bitCast(c.resists)),
+            .skillBar0 = @as([4]i8, c.skillBar[0..4].*),
+            .skillBar1 = @as([16]i8, c.skillBar[4..].*),
+            .guildLevel = c.guildLevel,
+            .resists = @as([4]u8, @bitCast(c.currentStats.resists)),
             .slotId = c.slotId,
             .userId = userId,
-            .skillBar1 = c.skillBar1,
-            .attackSpeed = c.attackSpeed,
+            .attackSpeed = c.currentStats.attackSpeed,
             .tab = c.tab,
         });
 
@@ -399,7 +429,7 @@ pub const PacketCharSpawnOutput = extern struct {
 
 pub const MobData = extern struct {
     name: [12]u8,
-    pkLevel: u8,
+    pkLevel: i8,
     currentKill: u8,
     totalKill: u16,
     equipments: [16]MobItem,
@@ -415,10 +445,10 @@ pub const MobData = extern struct {
         return MobData{
             .name = mob.name[0..12].*,
             .pkLevel = mob.pkLevel,
-            .currentKill = mob.currentKill,
+            .currentKill = @intCast(mob.currentKill & 0xFF),
             .totalKill = mob.totalKill,
             .guildId = mob.guildId,
-            .stats = StatsData.from(mob.stats),
+            .stats = StatsData.fromMob(mob),
             .spawn = mob.spawnType,
             .tab = mob.tab,
             .equipments = @bitCast(mob.equipments),

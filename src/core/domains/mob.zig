@@ -47,10 +47,16 @@ pub const Mob = struct {
     // if user need peerId
     mobId: u16 = 0,
     name: [16]u8 = [_]u8{0} ** 16,
+    // mobtype
+    // 0 = ENEMY
+    // 1 = INTERACT
+    kind: u8 = 0,
+    //
+    level: u16 = 0,
     // must start with -1
-    pkLevel: u8 = 255,
+    pkLevel: i8 = -1,
     // current kill count of mob
-    currentKill: u8 = 0,
+    currentKill: u16 = 0,
     // total kill count of mob
     totalKill: u16 = 0,
     // item with itemID and level
@@ -67,17 +73,6 @@ pub const Mob = struct {
     tab: [26]u8 = [_]u8{0} ** 26,
 };
 
-pub const StatsState = packed struct(u16) {
-    // question: what is it?
-    merchant: u4 = 0,
-    // question: what is it?
-    direction: u4 = 0,
-    // movement speed of character
-    movementSpeed: u4 = 0,
-    // level of PK
-    pkLevel: u4 = 0,
-};
-
 pub const SkillAttributes = packed struct(u32) {
     // weapon
     skill0: u8 = 0,
@@ -89,20 +84,32 @@ pub const SkillAttributes = packed struct(u32) {
     skill3: u8 = 0,
 };
 
+pub const MovementStats = packed struct(u8) {
+    speed: u4 = 1,
+    direction: u4 = 0,
+};
+
 pub const Stats = extern struct {
-    level: u16 = 1,
+    statsId: u16 = 0,
     defense: i16 = 10,
     attack: i16 = 50,
-    state: StatsState = .{},
+    attackSpeed: u16 = 0,
+    magicDamage: u16 = 0,
+    movement: MovementStats = .{},
     maxHp: u16 = 100,
     maxMp: u16 = 100,
+    regenHp: i8 = 1,
+    regenMp: i8 = 1,
     hp: u16 = 100,
     mp: u16 = 100,
+    criticalRate: u8 = 0,
+    // attributes
     str: i16 = 0,
     int: i16 = 0,
     dex: i16 = 0,
     con: i16 = 0,
     skills: SkillAttributes = .{},
+    resists: ResistStats = .{},
 };
 
 pub const Buffer = extern struct {
@@ -112,8 +119,8 @@ pub const Buffer = extern struct {
 };
 
 pub const ResistStats = extern struct {
-    ice: u8,
-    fire: u8,
-    element: u8,
-    lighting: u8,
+    ice: u8 = 0,
+    fire: u8 = 0,
+    element: u8 = 0,
+    lighting: u8 = 0,
 };

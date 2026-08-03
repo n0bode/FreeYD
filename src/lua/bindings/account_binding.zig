@@ -57,6 +57,14 @@ pub fn bind(L: *lua.State) void {
             },
         },
         .{
+            .name = "save_character",
+            .value = .{
+                .func = .{
+                    .func = lua__save_character,
+                },
+            },
+        },
+        .{
             .name = "get_current_char",
             .value = .{
                 .func = .{
@@ -134,13 +142,13 @@ fn lua__create_character(L: *lua.State) i32 {
     char.slotId = slotId;
     @memcpy(char.name[0..name.len], name[0..]);
 
-    if (!L.isNil(6) and L.getLuaType(6) == .Function) {
+    if (L.isType(6, .Function)) {
         L.pushValue(6);
         L.pushValue(-2);
         if (!L.pcall(1, 0)) {
             const msg = L.toString(-1);
             std.log.err("create_character 'builder' returns failed: {s}", .{msg});
-            L.pop(1);
+            L.pop(2);
             return L.throw("builder returns failed");
         }
     }
@@ -189,4 +197,21 @@ fn lua__delete_character(L: *lua.State) i32 {
 
     self.characters[@intCast(slotId)] = std.mem.zeroes(domain.Character);
     return 0;
+}
+
+fn lua__save_character(L: *lua.State) i32 {
+    const self: *domain.Account = toUserdata(L, 1) orelse {
+        return L.throw("function must be called with an account instance");
+    };
+
+    const db = DatabaseBinding.toUserdata(L, 2) orelse {
+        return L.throw("missing database to save");
+    };
+
+    const char = CharacterBinding.toUserdata(L, 3) orelse {
+        return L.throw("missing character to save");
+    };
+
+    L.pushBool(db.db.saveCharacter(db.io, self, char));
+    return 1;
 }

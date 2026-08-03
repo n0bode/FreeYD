@@ -16,7 +16,8 @@ pub const Position = @import("char.zig").Position;
 pub const EquipmentSlot = @import("char.zig").EquipmentSlot;
 
 pub const Stats = @import("mob.zig").Stats;
-pub const StatsState = @import("mob.zig").StatsState;
+pub const MovementStats = @import("mob.zig").MovementStats;
+
 pub const SkillAttributes = @import("mob.zig").SkillAttributes;
 pub const ResitsStats = @import("mob.zig").ResistStats;
 pub const Buffer = @import("mob.zig").Buffer;

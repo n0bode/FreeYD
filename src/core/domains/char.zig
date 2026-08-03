@@ -33,8 +33,8 @@ pub const CitizenInfo = packed struct(u8) {
 };
 
 pub const Position = extern struct {
-    x: i16,
-    y: i16,
+    x: i16 = 0,
+    y: i16 = 0,
 };
 
 pub const EquipmentSlot = enum(u8) {
@@ -57,66 +57,46 @@ pub const EquipmentSlot = enum(u8) {
 };
 
 pub const Character = extern struct {
+    characterId: u32 = 0,
     accountId: u64 = 0,
     slotId: u8 = 0,
 
-    name: [16]u8,
-    tab: [26]u8,
+    level: u16 = 0,
+    name: [16]u8 = [_]u8{0} ** 16,
+    tab: [26]u8 = [_]u8{0} ** 26,
 
-    pkLevel: u8 = 255,
+    pkLevel: i8 = -1,
     totalKill: u16 = 0,
-    currentKill: u8 = 0,
+    currentKill: u16 = 0,
 
     clan: u8 = 0,
     soul: CharacterSoul = .MORTAL,
-
-    citizenInfo: CitizenInfo,
-
+    citizenInfo: CitizenInfo = .{},
     guildId: u16 = 0,
+    guildLevel: u8 = 0,
     class: CharacterClass,
-    guildRole: u8 = 0,
     rsv: u16 = 0,
     quest: u8 = 0,
-
     gold: i32 = 0,
     exp: u32 = 0,
-
-    position: Position,
-
-    stats: Stats,
-    currentStats: Stats,
-
+    position: Position = .{},
+    stats: Stats = .{},
+    currentStats: Stats = .{},
     equipments: [16]Item,
     carry: [64]Item,
-
     skillPoints: u16,
-    magic: u32,
-
     attributePoints: u16,
     specialsBonus: u16,
     skillsBonus: u16,
-
-    criticRate: u8,
     saveMana: u8,
-
-    skillBar0: [4]i8,
-    skillBar1: [16]i8,
-    guildLevel: u8,
-
-    regenHp: i8,
-    regenMp: i8,
-    attackSpeed: u16,
-
-    resists: ResistStats,
+    skillBar: [20]i8,
 
     pub fn empty(class: CharacterClass) Character {
         var self = std.mem.zeroInit(Character, .{
             .class = class,
         });
 
-        self.skillBar0 = [_]i8{-1} ** 4;
-        self.skillBar1 = [_]i8{-1} ** 16;
-
+        self.skillBar = [_]i8{-1} ** 20;
         // in 7.54 FaceID, 1 = TK, 11 = FM, BM = 21, HT = 31
         if (self.soul == .MORTAL) {
             self.equipments[0].itemID = 1 + @as(u16, @intCast(@intFromEnum(class))) * 10;

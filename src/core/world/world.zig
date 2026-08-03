@@ -174,7 +174,6 @@ pub const World = struct {
         errdefer self.points.destroy(spawned);
 
         const position = info.position;
-        mob.stats.state.merchant = 1;
         spawned.* = .{
             .startPosition = .{ .x = position.x, .y = position.y },
             .onInteract = info.onInteract,

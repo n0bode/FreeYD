@@ -91,23 +91,29 @@ pub const Dispatcher = struct {
         var count: u32 = 0;
         L.restoreRegistry(funcRegId);
         if (L.isNil(-1)) {
+            L.pop(1);
             return true;
         }
+
         count += 1;
         bindings.PeerBinding.newUserdata(L, peer);
         if (message) |packet| {
             count += 1;
             bindings.PacketBinder.newUserdata(L, packet);
         }
+
         if (!L.pcall(count, 1)) {
             logger.err("failed to call event {s}: {s}", .{ eventName, L.toString(-1) });
             L.pop(1);
+            return false;
         }
-        defer L.pop(1);
 
-        if (L.getLuaType(-1) == .Bool) {
-            return L.toBoolean(-1);
+        if (L.isBoolean(-1)) {
+            const result = L.toBoolean(-1);
+            L.pop(1);
+            return result;
         }
+        L.pop(1);
         return true;
     }
 };

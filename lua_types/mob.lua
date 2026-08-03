@@ -21,11 +21,18 @@ local Mob = {}
 ---@field movement_speed integer
 ---@field pk_level integer
 
+---@class MovementStats
+---@field speed integer
+---@field direction integer
+
 ---@class Stats
 ---@field level integer
 ---@field defense integer
 ---@field attack integer
----@field state StatsState
+---@field attackSpeed integer
+---@field regen_hp integer
+---@field regen_mp integer
+---@field movement MovementStats
 ---@field max_hp integer
 ---@field max_mp integer
 ---@field hp integer

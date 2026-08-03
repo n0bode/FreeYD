@@ -365,10 +365,6 @@ fn lua_create_enemy(L: *State) i32 {
     var stats = core.domains.Stats{};
     L.getField(2, "stats");
     if (!L.isNil(-1)) {
-        L.getField(-1, "level");
-        stats.level = L.toIntegerOr(u16, -1, 1);
-        L.pop(1);
-
         L.getField(-1, "max_hp");
         stats.maxHp = L.toIntegerOr(u16, -1, 100);
         stats.hp = stats.maxHp;
@@ -392,7 +388,7 @@ fn lua_create_enemy(L: *State) i32 {
         L.pop(1);
 
         L.getField(-1, "speed");
-        stats.state.movementSpeed = L.toIntegerOr(u4, -1, 1);
+        stats.movement.speed = L.toIntegerOr(u4, -1, 1);
         L.pop(1);
 
         L.getField(-1, "int");

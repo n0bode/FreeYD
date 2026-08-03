@@ -44,7 +44,7 @@ local function spawn_pork(x, y)
                 another:send_command("motion_mob", {
                     origin = { x = last_position.x, y = last_position.y },
                     kind = 0,
-                    speed = mob.stats.state.movement_speed,
+                    speed = mob.stats.movement.speed,
                     mob_id = mob.mob_id,
                     destination = { x = dest.x, y = dest.y },
                 })

@@ -66,6 +66,7 @@ local CharacterStats = {}
 ---User character (mapped from the Zig `Character` struct).
 ---Numeric fields are mapped with their original names (no snake_case conversion).
 ---@class Character
+---@field level integer
 ---@field name string  Character name (up to 16 chars)
 ---@field gold integer Available gold
 ---@field account_id integer ID of the account that owns this character
@@ -74,7 +75,7 @@ local CharacterStats = {}
 ---@field class CharacterClass Character class
 ---@field soul CharacterSoul Character god class
 ---@field citizen_info CitizenInfo maximum mana points
----@field stats CharacterStats Character stats
+---@field stats Stats Character stats
 ---@field position Position Position of the character in the world
 ---@field current_stats CharacterStats Current stats (after buffs/debuffs)
 ---@field tab string Text used in game above the mob head

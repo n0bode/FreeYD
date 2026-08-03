@@ -39,7 +39,7 @@ function Account:get_current_char() end
 ---@param slotId integer
 ---@param type CharacterSoul
 ---@param builder fun(char: Character) optional function to customize the character after creation
----@return Character?
+---@return Character
 ---@return string? error_message
 function Account:create_character(name, slotId, class, type, builder) end
 
@@ -48,3 +48,9 @@ function Account:create_character(name, slotId, class, type, builder) end
 ---@return Character?
 ---@return string? ?error_message
 function Account:get_character(index) end
+
+---Save a character to the database.
+---@param db Database
+---@param char Character
+---@return boolean success
+function Account:save_character(db, char) end

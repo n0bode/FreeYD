@@ -37,15 +37,13 @@ server:on("on_create_char", function(peer, req)
 
         -- TODO: ler de uma tabela ou algo do tipo
         char.stats.attack = 400
-        char.stats.level = 116
-        char.current_stats.level = 116
+        char.level = 116
         char.skill_points = 255
-        char.stats.state.merchant = 2
         char.stats.skills.skill0 = 10
         char.stats.skills.skill1 = 91
         char.stats.skills.skill2 = 92
         char.stats.skills.skill3 = 93
-        char.stats.state.movement_speed = 7
+        char.stats.movement.speed = 7
         char.stats.str = 255
         char.stats.int = 255
         char.stats.dex = 255
@@ -58,9 +56,13 @@ server:on("on_create_char", function(peer, req)
         return false
     end
 
-
     -- save creation
-    account:save(db)
+    if not account:save_character(db, char) then
+        logger:error("erro ao salvar char: " .. err)
+        peer:send_command("char_create_failed", "failed to save")
+        return false
+    end
+
     peer:send_command("char_created", "character created")
     return true
 end)

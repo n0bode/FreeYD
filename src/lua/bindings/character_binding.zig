@@ -10,7 +10,7 @@ pub const CharacterBinding = @This();
 pub const metatableName = mapper.metatableName;
 
 const StatsBinding = Mapper(domain.Stats);
-const StatsStateBinding = Mapper(domain.StatsState);
+const MovementStatsBinding = Mapper(domain.MovementStats);
 const SkillAttributesBinding = Mapper(domain.SkillAttributes);
 const ResistStatsBinding = Mapper(domain.ResitsStats);
 const CitizenBinding = Mapper(domain.CitizenInfo);
@@ -76,7 +76,7 @@ pub fn bind(L: *lua.State) void {
     bindEnums(L);
     StatsBinding.bind(L);
     ResistStatsBinding.bind(L);
-    StatsStateBinding.bind(L);
+    MovementStatsBinding.bind(L);
     SkillAttributesBinding.bind(L);
     CitizenBinding.bind(L);
     ItemBinding.bind(L);

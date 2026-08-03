@@ -9,7 +9,8 @@ const Server = @import("network").Server;
 const Peer = @import("network").Peer;
 
 const ParseArgs = @import("utils").ParseArgs;
-const FileDB = @import("filedb").FileDB;
+//const FileDB = @import("filedb").FileDB;
+const SQLiteDB = @import("sqlitedb").SqliteDB;
 const Account = @import("core").domains.Account;
 const serverlogic = @import("serverlogic");
 const ServerLogic = serverlogic.ServerLogic;
@@ -92,7 +93,12 @@ pub fn main(init: Init) !void {
     const allocator = arena.allocator();
     defer arena.deinit();
 
-    var database = FileDB.init("dbs");
+    var database = try SQLiteDB.init(allocator, "db/freeyd.db");
+    const interface = database.interface();
+    var account: Account = std.mem.zeroes(Account);
+    _ = interface.signup(init.io, "root", "senha", &account);
+    _ = interface.login(init.io, "root", "senha", &account);
+
     var server: Server = try Server.init(allocator, config.config);
 
     var serverLogic = try ServerLogic.init(
